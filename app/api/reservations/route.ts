@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/session";
 import {
   getReservations,
 } from "@/services/reservation-service";
+import type { ReservationStatus } from "@/lib/generated/prisma/enums";
 
 export async function GET(
   request: Request
@@ -32,7 +33,10 @@ export async function GET(
         status:
           url.searchParams.get(
             "status"
-          ) ?? undefined,
+          ) as
+            | ReservationStatus
+            | undefined ??
+            undefined,
 
         channel:
           url.searchParams.get(

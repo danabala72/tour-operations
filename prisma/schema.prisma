@@ -1,0 +1,162 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name         String   @db.VarChar(150)
+  username     String   @unique @db.VarChar(150)
+  email        String?  @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+
+  role   UserRole   @default(DRIVER)
+  status UserStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Channel {
+  id     BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  code   String       @unique @db.VarChar(50)
+  name   String       @db.VarChar(100)
+  status ChannelStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  reservations Reservation[]
+
+  @@map("channels")
+}
+
+model Driver {
+  id     BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  name   String  @db.VarChar(150)
+  phone  String? @db.VarChar(50)
+  email  String? @unique @db.VarChar(255)
+  status DriverStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  assignments ReservationAssignment[]
+
+  @@map("drivers")
+}
+
+model ReservationAssignment {
+  id BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+
+  reservationId BigInt @map("reservation_id") @db.UnsignedBigInt
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  driverId BigInt @map("driver_id") @db.UnsignedBigInt
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Restrict)
+
+  status String @default("ASSIGNED") @db.VarChar(50)
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  acceptedAt DateTime? @map("accepted_at")
+  completedAt DateTime? @map("completed_at")
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([reservationId])
+  @@index([driverId])
+
+  @@map("reservation_assignments")
+}
+
+model Reservation {
+  id BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+
+  channelId BigInt @map("channel_id") @db.UnsignedBigInt
+  channel Channel @relation(fields: [channelId], references: [id])
+
+  supplierBookingId String @map("supplier_booking_id") @db.VarChar(100)
+  supplierReference String? @map("supplier_reference") @db.VarChar(100)
+
+  tourName String @map("tour_name") @db.VarChar(255)
+  tourOption String? @map("tour_option") @db.VarChar(255)
+
+  tourDate DateTime @map("tour_date") @db.Date
+  tourTime DateTime? @map("tour_time") @db.Time
+
+  customerName String @map("customer_name") @db.VarChar(255)
+  customerEmail String? @map("customer_email") @db.VarChar(255)
+  customerPhone String? @map("customer_phone") @db.VarChar(50)
+
+  paxTotal Int @default(0) @map("pax_total") @db.UnsignedInt
+
+  language String? @db.VarChar(10)
+
+  pickupTime DateTime? @map("pickup_time") @db.Time
+  pickupAddress String? @map("pickup_address") @db.VarChar(500)
+  pickupLat Decimal? @map("pickup_lat") @db.Decimal(10, 7)
+  pickupLng Decimal? @map("pickup_lng") @db.Decimal(10, 7)
+
+  salePrice Decimal? @map("sale_price") @db.Decimal(15, 2)
+  netPrice Decimal? @map("net_price") @db.Decimal(15, 2)
+  currency String? @db.VarChar(10)
+
+  customerNote String? @map("customer_note") @db.Text
+  internalNote String? @map("internal_note") @db.Text
+
+  status ReservationStatus @default(NEW)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  assignments ReservationAssignment[]
+
+  @@unique([channelId, supplierBookingId])
+  @@index([tourDate])
+  @@index([status])
+  @@index([channelId])
+
+  @@map("reservations")
+}
+
+enum UserRole {
+  ADMIN
+  DRIVER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ChannelStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ReservationStatus {
+  NEW
+  ASSIGNED
+  ON_PROGRESS
+  DONE
+  CANCELLED
+}

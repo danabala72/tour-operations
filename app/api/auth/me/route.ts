@@ -14,30 +14,16 @@ export async function GET() {
     );
   }
 
-  const [rows] = await db.execute(
-    `
-      SELECT
-        id,
-        name,
-        email,
-        role,
-        status
-      FROM users
-      WHERE id = ?
-      LIMIT 1
-    `,
-    [session.userId]
-  );
-
-  const users = rows as Array<{
-    id: number;
-    name: string;
-    email: string;
-    role: "ADMIN" | "DRIVER";
-    status: "ACTIVE" | "INACTIVE";
-  }>;
-
-  const user = users[0];
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      role: true,
+      status: true,
+    },
+  });
 
   if (!user || user.status !== "ACTIVE") {
     return Response.json(
@@ -54,7 +40,7 @@ export async function GET() {
     user: {
       id: user.id,
       name: user.name,
-      email: user.email,
+      username: user.username,
       role: user.role,
     },
   });

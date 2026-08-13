@@ -7,9 +7,9 @@ export async function POST(
   try {
     const body = await request.json();
 
-    const email =
-      typeof body.email === "string"
-        ? body.email.trim().toLowerCase()
+    const username =
+      typeof body.username === "string"
+        ? body.username.trim()
         : "";
 
     const password =
@@ -17,12 +17,12 @@ export async function POST(
         ? body.password
         : "";
 
-    if (!email || !password) {
+    if (!username || !password) {
       return Response.json(
         {
           success: false,
           message:
-            "Email and password are required.",
+            "Username and password are required.",
         },
         { status: 400 }
       );
@@ -30,7 +30,7 @@ export async function POST(
 
     const user =
       await authenticateUser(
-        email,
+        username,
         password
       );
 
@@ -39,7 +39,7 @@ export async function POST(
         {
           success: false,
           message:
-            "Invalid email or password.",
+            "Invalid username or password.",
         },
         { status: 401 }
       );

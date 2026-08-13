@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
+import type { ReservationWhereInput } from "@/lib/generated/prisma/models/Reservation";
+import type { ReservationStatus } from "@/lib/generated/prisma/enums";
 
 export type ReservationFilters = {
   date?: string;
   from?: string;
   to?: string;
-  status?: string;
+  status?: ReservationStatus;
   channel?: string;
   search?: string;
   page?: number;
@@ -27,53 +29,44 @@ export async function getReservations(
     )
   );
 
-  const offset = (page - 1) * limit;
-
-  const conditions: string[] = [];
-  const params: unknown[] = [];
+  const where: ReservationWhereInput = {};
 
   // =========================
   // DATE
   // =========================
 
   if (filters.date) {
-    conditions.push(
-      "r.tour_date = ?"
+    where.tourDate = new Date(
+      filters.date
     );
-
-    params.push(filters.date);
   } else if (
     filters.from ||
     filters.to
   ) {
     if (filters.from) {
-      conditions.push(
-        "r.tour_date >= ?"
-      );
-
-      params.push(filters.from);
+      where.tourDate = {
+        gte: new Date(filters.from),
+      };
     }
 
     if (filters.to) {
-      conditions.push(
-        "r.tour_date <= ?"
-      );
-
-      params.push(filters.to);
+      where.tourDate = {
+        ...(where.tourDate as {
+          gte?: Date;
+          lte?: Date;
+        } | Date),
+        lte: new Date(filters.to),
+      };
     }
   } else {
-    /*
-     * Default:
-     * today sampai 7 hari ke depan
-     */
-    conditions.push(`
-      r.tour_date BETWEEN
-        CURDATE()
-        AND DATE_ADD(
-          CURDATE(),
-          INTERVAL 7 DAY
-        )
-    `);
+    const today = new Date();
+    const next7 = new Date();
+    next7.setDate(today.getDate() + 7);
+
+    where.tourDate = {
+      gte: today,
+      lte: next7,
+    };
   }
 
   // =========================
@@ -81,11 +74,7 @@ export async function getReservations(
   // =========================
 
   if (filters.status) {
-    conditions.push(
-      "r.status = ?"
-    );
-
-    params.push(filters.status);
+    where.status = filters.status;
   }
 
   // =========================
@@ -93,11 +82,9 @@ export async function getReservations(
   // =========================
 
   if (filters.channel) {
-    conditions.push(
-      "c.code = ?"
-    );
-
-    params.push(filters.channel);
+    where.channel = {
+      code: filters.channel,
+    };
   }
 
   // =========================
@@ -105,123 +92,110 @@ export async function getReservations(
   // =========================
 
   if (filters.search) {
-    const searchFields = [
-      "r.supplier_booking_id",
-      "r.supplier_reference",
-      "r.customer_name",
-      "r.customer_email",
-      "r.customer_phone",
-      "r.tour_name",
-      "r.tour_option",
-      "r.pickup_address",
-      "r.customer_note",
-      "r.internal_note",
-      "c.code",
-      "c.name",
+    where.OR = [
+      {
+        supplierBookingId: {
+          contains: filters.search,
+        },
+      },
+      {
+        supplierReference: {
+          contains: filters.search,
+        },
+      },
+      {
+        customerName: {
+          contains: filters.search,
+        },
+      },
+      {
+        customerEmail: {
+          contains: filters.search,
+        },
+      },
+      {
+        customerPhone: {
+          contains: filters.search,
+        },
+      },
+      {
+        tourName: {
+          contains: filters.search,
+        },
+      },
+      {
+        tourOption: {
+          contains: filters.search,
+        },
+      },
+      {
+        pickupAddress: {
+          contains: filters.search,
+        },
+      },
+      {
+        customerNote: {
+          contains: filters.search,
+        },
+      },
+      {
+        internalNote: {
+          contains: filters.search,
+        },
+      },
+      {
+        channel: {
+          code: {
+            contains: filters.search,
+          },
+        },
+      },
+      {
+        channel: {
+          name: {
+            contains: filters.search,
+          },
+        },
+      },
     ];
-
-    conditions.push(`
-      (
-        ${searchFields
-          .map(
-            (field) =>
-              `${field} LIKE ?`
-          )
-          .join(" OR ")}
-      )
-    `);
-
-    const search =
-      `%${filters.search}%`;
-
-    params.push(
-      ...searchFields.map(
-        () => search
-      )
-    );
   }
-
-  const where =
-    conditions.length > 0
-      ? `WHERE ${conditions.join(
-          " AND "
-        )}`
-      : "";
 
   // =========================
   // DATA
   // =========================
 
-  const [rows] = await db.query(
-    `
-      SELECT
-        r.*,
-
-        c.id AS channel_id,
-        c.code AS channel_code,
-        c.name AS channel_name
-
-      FROM reservations r
-
-      LEFT JOIN channels c
-        ON c.id = r.channel_id
-
-      ${where}
-
-      ORDER BY
-        r.tour_date ASC,
-        r.tour_time ASC,
-        r.id ASC
-
-      LIMIT ?
-      OFFSET ?
-    `,
-    [
-      ...params,
-      limit,
-      offset,
-    ]
-  );
-
-  // =========================
-  // TOTAL
-  // =========================
-
-  const [countRows] =
-    await db.query(
-      `
-        SELECT
-          COUNT(*) AS total
-
-        FROM reservations r
-
-        LEFT JOIN channels c
-          ON c.id = r.channel_id
-
-        ${where}
-      `,
-      params
-    );
-
-  const total = Number(
-    (
-      countRows as Array<{
-        total: number;
-      }>
-    )[0]?.total ?? 0
-  );
+  const [data, total] =
+    await Promise.all([
+      db.reservation.findMany({
+        where,
+        include: {
+          channel: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          { tourDate: "asc" },
+          { tourTime: "asc" },
+          { id: "asc" },
+        ],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.reservation.count({ where }),
+    ]);
 
   return {
-    data: rows,
+    data,
 
     pagination: {
       page,
       limit,
       total,
-      totalPages:
-        Math.ceil(
-          total / limit
-        ),
+      totalPages: Math.ceil(total / limit),
     },
   };
 }

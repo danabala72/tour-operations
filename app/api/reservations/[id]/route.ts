@@ -28,27 +28,19 @@ export async function GET(
       );
     }
 
-    const [rows] = await db.query(
-      `
-        SELECT
-          r.*,
-          c.id AS channel_id,
-          c.code AS channel_code,
-          c.name AS channel_name
-        FROM reservations r
-        LEFT JOIN channels c
-          ON c.id = r.channel_id
-        WHERE r.id = ?
-        LIMIT 1
-      `,
-      [reservationId]
-    );
-
-    const reservations =
-      rows as Array<Record<string, unknown>>;
-
     const reservation =
-      reservations[0];
+      await db.reservation.findUnique({
+        where: { id: reservationId },
+        include: {
+          channel: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+        },
+      });
 
     if (!reservation) {
       return Response.json(

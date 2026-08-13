@@ -15,13 +15,13 @@ import Image from "next/image";
 
 type Reservation = {
   id: number;
-  supplier_booking_id: string;
+  supplierBookingId: string;
   supplier_reference: string | null;
-  tour_name: string;
-  tour_option: string | null;
+  tourName: string;
+  tourOption: string | null;
   tour_date: string;
   tour_time: string | null;
-  customer_name: string;
+  customerName: string;
   customer_email: string | null;
   customer_phone: string | null;
   pax_total: number;
@@ -49,7 +49,6 @@ type ApiResponse = {
   pagination: Pagination;
   message?: string;
 };
-
 
 const statusFilters = [
   {
@@ -90,13 +89,11 @@ const statusFilters = [
   },
 ];
 
-
 const channelFilters = [
   {
     value: "",
     label: "All",
     icon: ListFilter,
-
   },
   {
     value: "CIVITATIS",
@@ -116,102 +113,67 @@ const channelFilters = [
 ];
 
 export default function ReservationsPage() {
-  const [data, setData] = useState<
-    Reservation[]
-  >([]);
+  const [data, setData] = useState<Reservation[]>([]);
 
-  const [pagination, setPagination] =
-    useState<Pagination>({
-      page: 1,
-      limit: 20,
-      total: 0,
-      totalPages: 0,
-    });
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  });
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
 
   const searchInitialized = useRef(false);
 
-  const [status, setStatus] =
-    useState("");
+  const [status, setStatus] = useState("");
 
-  const [channel, setChannel] =
-    useState("");
+  const [channel, setChannel] = useState("");
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  async function loadReservations(
-    page = 1
-  ) {
+  async function loadReservations(page = 1) {
     setLoading(true);
     setError("");
 
     try {
-      const params =
-        new URLSearchParams();
+      const params = new URLSearchParams();
 
-      params.set(
-        "page",
-        String(page)
-      );
+      params.set("page", String(page));
 
       params.set("limit", "20");
 
       if (search.trim()) {
-        params.set(
-          "search",
-          search.trim()
-        );
+        params.set("search", search.trim());
       }
 
       if (status) {
-        params.set(
-          "status",
-          status
-        );
+        params.set("status", status);
       }
 
       if (channel) {
-        params.set(
-          "channel",
-          channel
-        );
+        params.set("channel", channel);
       }
 
-      const response =
-        await fetch(
-          `/api/reservations?${params.toString()}`,
-          {
-            cache: "no-store",
-          }
-        );
+      const response = await fetch(`/api/reservations?${params.toString()}`, {
+        cache: "no-store",
+      });
 
-      const result =
-        (await response.json()) as ApiResponse;
+      const result = (await response.json()) as ApiResponse;
 
       if (!response.ok) {
-        throw new Error(
-          result.message ??
-          "Failed to load reservations."
-        );
+        throw new Error(result.message ?? "Failed to load reservations.");
       }
 
       setData(result.data);
-      setPagination(
-        result.pagination
-      );
+      setPagination(result.pagination);
     } catch (error) {
       console.error(error);
 
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load reservations."
+        error instanceof Error ? error.message : "Failed to load reservations.",
       );
     } finally {
       setLoading(false);
@@ -241,9 +203,7 @@ export default function ReservationsPage() {
     <div className="mx-auto max-w-7xl space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold">
-          Reservations
-        </h2>
+        <h2 className="text-xl font-semibold">Reservations</h2>
 
         <p className="mt-1 text-sm text-[var(--muted)]">
           Manage upcoming reservations.
@@ -255,9 +215,7 @@ export default function ReservationsPage() {
         <div className="relative">
           <input
             value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
+            onChange={(event) => setSearch(event.target.value)}
             placeholder="Search reservation, customer, tour..."
             className="
               w-full
@@ -299,7 +257,7 @@ export default function ReservationsPage() {
                 hover:text-slate-600
               "
             >
-              <XIcon/>
+              <XIcon />
             </button>
           )}
         </div>
@@ -313,7 +271,9 @@ export default function ReservationsPage() {
         </div>
       )}
 
-      <h2 className="text-sm text-[var(--muted)] mt-2 mb-1">Filter By Channel</h2>
+      <h2 className="text-sm text-[var(--muted)] mt-2 mb-1">
+        Filter By Channel
+      </h2>
       <div className="flex gap-2 overflow-x-auto py-1">
         {channelFilters.map((item) => {
           const active = channel === item.value;
@@ -342,10 +302,11 @@ export default function ReservationsPage() {
                     sm:h-10
                     sm:w-auto
                     sm:px-3.5
-                    ${active
-                  ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
-                  : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
-                }`}
+                    ${
+                      active
+                        ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
+                        : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
             >
               {item.logo ? (
                 <Image
@@ -374,15 +335,15 @@ export default function ReservationsPage() {
                 })()
               ) : null}
 
-              <span className="hidden sm:inline">
-                {item.label}
-              </span>
+              <span className="hidden sm:inline">{item.label}</span>
             </button>
           );
         })}
       </div>
 
-      <h2 className="text-sm text-[var(--muted)] mt-2 mb-1">Filter By Status</h2>
+      <h2 className="text-sm text-[var(--muted)] mt-2 mb-1">
+        Filter By Status
+      </h2>
       <div className="flex gap-2 overflow-x-auto py-1">
         {statusFilters.map((item) => {
           const active = status === item.value;
@@ -411,9 +372,10 @@ export default function ReservationsPage() {
                 sm:h-10
                 sm:w-auto
                 sm:px-3.5
-                ${active
-                  ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
-                  : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+                ${
+                  active
+                    ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
+                    : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
                 }
               `}
             >
@@ -426,9 +388,7 @@ export default function ReservationsPage() {
                 `}
               />
 
-              <span className="hidden sm:inline">
-                {item.label}
-              </span>
+              <span className="hidden sm:inline">{item.label}</span>
             </button>
           );
         })}
@@ -436,9 +396,7 @@ export default function ReservationsPage() {
 
       {/* Result count */}
       <div className="text-sm text-[var(--muted)]">
-        {loading
-          ? "Loading..."
-          : `${pagination.total} reservations`}
+        {loading ? "Loading..." : `${pagination.total} reservations`}
       </div>
 
       {/* Mobile list */}
@@ -450,10 +408,7 @@ export default function ReservationsPage() {
         ) : (
           <div className="space-y-4">
             {data.map((reservation) => (
-              <ReservationCard
-                key={reservation.id}
-                reservation={reservation}
-              />
+              <ReservationCard key={reservation.id} reservation={reservation} />
             ))}
           </div>
         )}
@@ -468,29 +423,20 @@ export default function ReservationsPage() {
         ) : data.length === 0 ? (
           <EmptyState />
         ) : (
-          <ReservationTable
-            reservations={data}
-          />
+          <ReservationTable reservations={data} />
         )}
       </div>
 
       {/* Pagination */}
-      {!loading &&
-        pagination.totalPages > 1 && (
-          <Pagination
-            pagination={pagination}
-            onPageChange={loadReservations}
-          />
-        )}
+      {!loading && pagination.totalPages > 1 && (
+        <Pagination pagination={pagination} onPageChange={loadReservations} />
+      )}
     </div>
   );
 }
 
-function ReservationCard({
-  reservation,
-}: {
-  reservation: Reservation;
-}) {
+function ReservationCard({ reservation }: { reservation: Reservation }) {
+  console.log(reservation);
   return (
     <div
       className="
@@ -535,62 +481,44 @@ function ReservationCard({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-500">
-                {formatTime(
-                  reservation.tour_time
-                )}
+                {formatTime(reservation.tourName)}
               </span>
 
-              <span className="text-slate-300">
-                •
-              </span>
+              <span className="text-slate-300">•</span>
 
               <span className="text-xs text-slate-400">
-                {formatDate(
-                  reservation.tour_date
-                )}
+                {formatDate(reservation.tour_date)}
               </span>
             </div>
 
             <h3 className="mt-1 truncate text-base font-semibold text-slate-900">
-              {reservation.customer_name}
+              {reservation.customerName}
             </h3>
           </div>
 
-          <StatusBadge
-            status={reservation.status}
-          />
+          <StatusBadge status={reservation.status} />
         </div>
 
         {/* Tour */}
         <div className="mt-4">
           <div className="font-medium text-slate-800">
-            {reservation.tour_name}
+            {reservation.tourName}
           </div>
 
-          {reservation.tour_option && (
+          {reservation.tourOption && (
             <div className="mt-1 text-sm text-slate-500">
-              {reservation.tour_option}
+              {reservation.tourOption}
             </div>
           )}
         </div>
 
         {/* Meta */}
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
-          <span>
-            👥 {reservation.pax_total} pax
-          </span>
+          <span>👥 {reservation.pax_total} pax</span>
 
-          <span>
-            🌐{" "}
-            {reservation.channel_code ??
-              "-"}
-          </span>
+          <span>🌐 {reservation.channel_code ?? "-"}</span>
 
-          <span>
-            🗣️{" "}
-            {reservation.language ??
-              "-"}
-          </span>
+          <span>🗣️ {reservation.language ?? "-"}</span>
         </div>
 
         {/* Pickup */}
@@ -609,7 +537,7 @@ function ReservationCard({
         {/* Footer */}
         <div className="mt-4 flex items-center justify-between border-t border-slate-100/80 pt-3">
           <span className="text-xs text-slate-400">
-            #{reservation.supplier_booking_id}
+            #{reservation.supplierBookingId}
           </span>
 
           <button
@@ -636,11 +564,7 @@ function ReservationCard({
   );
 }
 
-function ReservationTable({
-  reservations,
-}: {
-  reservations: Reservation[];
-}) {
+function ReservationTable({ reservations }: { reservations: Reservation[] }) {
   return (
     <div className="hidden lg:block">
       <div
@@ -658,29 +582,17 @@ function ReservationTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs font-medium uppercase tracking-wide text-slate-400">
-              <th className="px-5 py-4">
-                Date
-              </th>
+              <th className="px-5 py-4">Date</th>
 
-              <th className="px-5 py-4">
-                Customer
-              </th>
+              <th className="px-5 py-4">Customer</th>
 
-              <th className="px-5 py-4">
-                Tour
-              </th>
+              <th className="px-5 py-4">Tour</th>
 
-              <th className="px-5 py-4">
-                Pax
-              </th>
+              <th className="px-5 py-4">Pax</th>
 
-              <th className="px-5 py-4">
-                Channel
-              </th>
+              <th className="px-5 py-4">Channel</th>
 
-              <th className="px-5 py-4">
-                Status
-              </th>
+              <th className="px-5 py-4">Status</th>
 
               <th className="px-5 py-4" />
             </tr>
@@ -701,36 +613,32 @@ function ReservationTable({
               >
                 <td className="px-5 py-4">
                   <div className="font-medium text-slate-800">
-                    {formatDate(
-                      reservation.tour_date
-                    )}
+                    {formatDate(reservation.tour_date)}
                   </div>
 
                   <div className="mt-0.5 text-xs text-slate-400">
-                    {formatTime(
-                      reservation.tour_time
-                    )}
+                    {formatTime(reservation.tour_time)}
                   </div>
                 </td>
 
                 <td className="px-5 py-4">
                   <div className="font-medium text-slate-800">
-                    {reservation.customer_name}
+                    {reservation.customerName}
                   </div>
 
                   <div className="mt-0.5 text-xs text-slate-400">
-                    #{reservation.supplier_booking_id}
+                    #{reservation.supplierBookingId}
                   </div>
                 </td>
 
                 <td className="max-w-sm px-5 py-4">
                   <div className="truncate font-medium text-slate-700">
-                    {reservation.tour_name}
+                    {reservation.tourName}
                   </div>
 
-                  {reservation.tour_option && (
+                  {reservation.tourOption && (
                     <div className="mt-0.5 truncate text-xs text-slate-400">
-                      {reservation.tour_option}
+                      {reservation.tourOption}
                     </div>
                   )}
                 </td>
@@ -741,15 +649,12 @@ function ReservationTable({
 
                 <td className="px-5 py-4">
                   <span className="text-xs font-medium text-slate-500">
-                    {reservation.channel_code ??
-                      "-"}
+                    {reservation.channel_code ?? "-"}
                   </span>
                 </td>
 
                 <td className="px-5 py-4">
-                  <StatusBadge
-                    status={reservation.status}
-                  />
+                  <StatusBadge status={reservation.status} />
                 </td>
 
                 <td className="px-5 py-4 text-right">
@@ -783,52 +688,32 @@ function ReservationTable({
   );
 }
 
-function StatusBadge({
-  status,
-}: {
-  status: string;
-}) {
-  const styles: Record<
-    string,
-    string
-  > = {
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
     NEW: "bg-blue-50 text-blue-700",
-    ASSIGNED:
-      "bg-amber-50 text-amber-700",
-    ON_PROGRESS:
-      "bg-purple-50 text-purple-700",
+    ASSIGNED: "bg-amber-50 text-amber-700",
+    ON_PROGRESS: "bg-purple-50 text-purple-700",
     DONE: "bg-green-50 text-green-700",
-    CANCELLED:
-      "bg-red-50 text-red-700",
+    CANCELLED: "bg-red-50 text-red-700",
   };
 
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${styles[status] ??
-        "bg-gray-100 text-gray-700"
-        }`}
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
+        styles[status] ?? "bg-gray-100 text-gray-700"
+      }`}
     >
       {status}
     </span>
   );
 }
 
-function Info({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs text-[var(--muted)]">
-        {label}
-      </div>
+      <div className="text-xs text-[var(--muted)]">{label}</div>
 
-      <div className="mt-0.5 font-medium">
-        {value}
-      </div>
+      <div className="mt-0.5 font-medium">{value}</div>
     </div>
   );
 }
@@ -836,9 +721,7 @@ function Info({
 function EmptyState() {
   return (
     <div className="rounded-xl border border-red-500/60  bg-white px-4 py-12 text-center">
-      <div className="text-sm font-medium">
-        No reservations found
-      </div>
+      <div className="text-sm font-medium">No reservations found</div>
 
       <div className="mt-1 text-xs text-[var(--muted)]">
         Try changing your filters.
@@ -865,43 +748,27 @@ function Pagination({
   onPageChange,
 }: {
   pagination: Pagination;
-  onPageChange: (
-    page: number
-  ) => void;
+  onPageChange: (page: number) => void;
 }) {
   return (
     <div className="flex items-center justify-between rounded-xl border bg-white px-4 py-3">
       <button
         type="button"
-        disabled={
-          pagination.page <= 1
-        }
-        onClick={() =>
-          onPageChange(
-            pagination.page - 1
-          )
-        }
+        disabled={pagination.page <= 1}
+        onClick={() => onPageChange(pagination.page - 1)}
         className="cursor-pointer rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40"
       >
         Previous
       </button>
 
       <span className="text-sm text-[var(--muted)]">
-        {pagination.page} /{" "}
-        {pagination.totalPages}
+        {pagination.page} / {pagination.totalPages}
       </span>
 
       <button
         type="button"
-        disabled={
-          pagination.page >=
-          pagination.totalPages
-        }
-        onClick={() =>
-          onPageChange(
-            pagination.page + 1
-          )
-        }
+        disabled={pagination.page >= pagination.totalPages}
+        onClick={() => onPageChange(pagination.page + 1)}
         className="cursor-pointer rounded-lg border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40"
       >
         Next
