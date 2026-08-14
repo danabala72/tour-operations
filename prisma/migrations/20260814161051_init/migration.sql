@@ -85,6 +85,7 @@ CREATE TABLE `reservations` (
     `customer_note` TEXT NULL,
     `internal_note` TEXT NULL,
     `status` ENUM('NEW', 'ASSIGNED', 'ON_PROGRESS', 'DONE', 'CANCELLED') NOT NULL DEFAULT 'NEW',
+    `booking_url` VARCHAR(500) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
