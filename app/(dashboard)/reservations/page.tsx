@@ -16,24 +16,26 @@ import Image from "next/image";
 type Reservation = {
   id: number;
   supplierBookingId: string;
-  supplier_reference: string | null;
+  supplierReference: string | null;
   tourName: string;
   tourOption: string | null;
-  tour_date: string;
-  tour_time: string | null;
+  tourDate: string;
+  tourTime: string | null;
   customerName: string;
-  customer_email: string | null;
-  customer_phone: string | null;
-  pax_total: number;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  paxTotal: number;
   language: string | null;
-  pickup_time: string | null;
-  pickup_address: string | null;
-  sale_price: number | string | null;
-  net_price: number | string | null;
+  pickupTime: string | null;
+  pickupAddress: string | null;
+  salePrice: number | string | null;
+  netPrice: number | string | null;
   currency: string | null;
   status: string;
-  channel_code: string | null;
-  channel_name: string | null;
+  channel: {
+    code: string | null;
+    name: string | null;
+  };
 };
 
 type Pagination = {
@@ -46,6 +48,9 @@ type Pagination = {
 type ApiResponse = {
   success: boolean;
   data: Reservation[];
+  channelCounts: Record<string, number>;
+  statusCounts: Record<string, number>;
+  dateCounts: Record<string, number>;
   pagination: Pagination;
   message?: string;
 };
@@ -130,6 +135,14 @@ export default function ReservationsPage() {
 
   const [channel, setChannel] = useState("");
 
+  const [channelCounts, setChannelCounts] = useState<Record<string, number>>({});
+
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+
+  const [dateFilter, setDateFilter] = useState("THIS_WEEK");
+
+  const [dateCounts, setDateCounts] = useState<Record<string, number>>({});
+
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
@@ -157,6 +170,10 @@ export default function ReservationsPage() {
         params.set("channel", channel);
       }
 
+      if (dateFilter) {
+        params.set("dateFilter", dateFilter);
+      }
+
       const response = await fetch(`/api/reservations?${params.toString()}`, {
         cache: "no-store",
       });
@@ -169,6 +186,9 @@ export default function ReservationsPage() {
 
       setData(result.data);
       setPagination(result.pagination);
+      setChannelCounts(result.channelCounts);
+      setStatusCounts(result.statusCounts);
+      setDateCounts(result.dateCounts);
     } catch (error) {
       console.error(error);
 
@@ -182,7 +202,7 @@ export default function ReservationsPage() {
 
   useEffect(() => {
     loadReservations(1);
-  }, [status, channel]);
+  }, [status, channel, dateFilter]);
 
   useEffect(() => {
     if (!searchInitialized.current) {
@@ -336,6 +356,18 @@ export default function ReservationsPage() {
               ) : null}
 
               <span className="hidden sm:inline">{item.label}</span>
+
+              <span
+                className={`text-xs ${
+                  active
+                    ? "text-blue-600"
+                    : "text-slate-400"
+                }`}
+              >
+                {item.value === ""
+                  ? Object.values(channelCounts).reduce((sum, count) => sum + count, 0)
+                  : (channelCounts[item.value] ?? 0)}
+              </span>
             </button>
           );
         })}
@@ -389,6 +421,86 @@ export default function ReservationsPage() {
               />
 
               <span className="hidden sm:inline">{item.label}</span>
+
+              <span
+                className={`text-xs ${
+                  active
+                    ? "text-blue-600"
+                    : "text-slate-400"
+                }`}
+              >
+                {item.value === ""
+                  ? Object.values(statusCounts).reduce((sum, count) => sum + count, 0)
+                  : (statusCounts[item.value] ?? 0)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <h2 className="text-sm text-[var(--muted)] mt-2 mb-1">
+        Filter By Date
+      </h2>
+      <div className="flex gap-2 overflow-x-auto py-1">
+        {[
+          {
+            value: "THIS_WEEK",
+            label: "This Week",
+          },
+          {
+            value: "TODAY",
+            label: "Today",
+          },
+          {
+            value: "TOMORROW",
+            label: "Tomorrow",
+          }
+        ].map((item) => {
+          const active = dateFilter === item.value;
+
+          return (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setDateFilter(item.value)}
+              title={item.label}
+              aria-label={item.label}
+              className={`flex
+                size-11
+                shrink-0
+                cursor-pointer
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                border
+                text-sm
+                font-medium
+                transition-all
+                duration-200
+                sm:h-10
+                sm:w-auto
+                sm:px-3.5
+                ${
+                  active
+                    ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
+                    : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+            >
+              <span className="hidden sm:inline">{item.label}</span>
+              <span className="sm:hidden">{item.label.slice(0, 2)}</span>
+
+              <span
+                className={`text-xs ${
+                  active
+                    ? "text-blue-600"
+                    : "text-slate-400"
+                }`}
+              >
+                {item.value === ""
+                  ? Object.values(dateCounts).reduce((sum, count) => sum + count, 0)
+                  : (dateCounts[item.value] ?? 0)}
+              </span>
             </button>
           );
         })}
@@ -481,13 +593,13 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-500">
-                {formatTime(reservation.tourName)}
+                {formatTime(reservation.tourTime)}
               </span>
 
               <span className="text-slate-300">•</span>
 
               <span className="text-xs text-slate-400">
-                {formatDate(reservation.tour_date)}
+                {formatDate(reservation.tourDate)}
               </span>
             </div>
 
@@ -514,22 +626,22 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
 
         {/* Meta */}
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
-          <span>👥 {reservation.pax_total} pax</span>
+          <span>👥 {reservation.paxTotal} pax</span>
 
-          <span>🌐 {reservation.channel_code ?? "-"}</span>
+          <span>🌐 {reservation.channel.code ?? "-"}</span>
 
           <span>🗣️ {reservation.language ?? "-"}</span>
         </div>
 
         {/* Pickup */}
-        {reservation.pickup_address && (
+        {reservation.pickupAddress && (
           <div className="mt-4 rounded-xl bg-slate-50/80 px-3 py-2.5">
             <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
               Pickup
             </div>
 
             <div className="mt-0.5 truncate text-sm text-slate-700">
-              {reservation.pickup_address}
+              {reservation.pickupAddress}
             </div>
           </div>
         )}
@@ -613,11 +725,11 @@ function ReservationTable({ reservations }: { reservations: Reservation[] }) {
               >
                 <td className="px-5 py-4">
                   <div className="font-medium text-slate-800">
-                    {formatDate(reservation.tour_date)}
+                    {formatDate(reservation.tourDate)}
                   </div>
 
                   <div className="mt-0.5 text-xs text-slate-400">
-                    {formatTime(reservation.tour_time)}
+                    {formatTime(reservation.tourTime)}
                   </div>
                 </td>
 
@@ -644,12 +756,12 @@ function ReservationTable({ reservations }: { reservations: Reservation[] }) {
                 </td>
 
                 <td className="px-5 py-4 text-slate-600">
-                  {reservation.pax_total}
+                  {reservation.paxTotal}
                 </td>
 
                 <td className="px-5 py-4">
                   <span className="text-xs font-medium text-slate-500">
-                    {reservation.channel_code ?? "-"}
+                    {reservation.channel.code ?? "-"}
                   </span>
                 </td>
 

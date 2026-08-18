@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/session";
 import {
   getReservations,
+  getChannelCounts,
+  getStatusCounts,
+  getDateCounts,
 } from "@/services/reservation-service";
 import type { ReservationStatus } from "@/lib/generated/prisma/enums";
 
@@ -48,6 +51,16 @@ export async function GET(
             "search"
           ) ?? undefined,
 
+        dateFilter:
+          url.searchParams.get(
+            "dateFilter"
+          ) as
+            | "ALL"
+            | "TODAY"
+            | "TOMORROW"
+            | "THIS_WEEK"
+            | undefined,
+
         page: Number(
           url.searchParams.get(
             "page"
@@ -61,9 +74,137 @@ export async function GET(
         ),
       });
 
+    const channelCounts =
+      await getChannelCounts({
+        date:
+          url.searchParams.get(
+            "date"
+          ) ?? undefined,
+
+        from:
+          url.searchParams.get(
+            "from"
+          ) ?? undefined,
+
+        to:
+          url.searchParams.get(
+            "to"
+          ) ?? undefined,
+
+        status:
+          url.searchParams.get(
+            "status"
+          ) as
+            | ReservationStatus
+            | undefined ??
+            undefined,
+
+        search:
+          url.searchParams.get(
+            "search"
+          ) ?? undefined,
+
+        dateFilter:
+          url.searchParams.get(
+            "dateFilter"
+          ) as
+            | "ALL"
+            | "TODAY"
+            | "TOMORROW"
+            | "THIS_WEEK"
+            | undefined,
+      });
+
+    const statusCounts =
+      await getStatusCounts({
+        date:
+          url.searchParams.get(
+            "date"
+          ) ?? undefined,
+
+        from:
+          url.searchParams.get(
+            "from"
+          ) ?? undefined,
+
+        to:
+          url.searchParams.get(
+            "to"
+          ) ?? undefined,
+
+        channel:
+          url.searchParams.get(
+            "channel"
+          ) ?? undefined,
+
+        search:
+          url.searchParams.get(
+            "search"
+          ) ?? undefined,
+
+        dateFilter:
+          url.searchParams.get(
+            "dateFilter"
+          ) as
+            | "ALL"
+            | "TODAY"
+            | "TOMORROW"
+            | "THIS_WEEK"
+            | undefined,
+      });
+
+    const dateCounts =
+      await getDateCounts({
+        date:
+          url.searchParams.get(
+            "date"
+          ) ?? undefined,
+
+        from:
+          url.searchParams.get(
+            "from"
+          ) ?? undefined,
+
+        to:
+          url.searchParams.get(
+            "to"
+          ) ?? undefined,
+
+        status:
+          url.searchParams.get(
+            "status"
+          ) as
+            | ReservationStatus
+            | undefined ??
+            undefined,
+
+        channel:
+          url.searchParams.get(
+            "channel"
+          ) ?? undefined,
+
+        search:
+          url.searchParams.get(
+            "search"
+          ) ?? undefined,
+
+        dateFilter:
+          url.searchParams.get(
+            "dateFilter"
+          ) as
+            | "ALL"
+            | "TODAY"
+            | "TOMORROW"
+            | "THIS_WEEK"
+            | undefined,
+      });
+
     return Response.json({
       success: true,
       ...result,
+      channelCounts,
+      statusCounts,
+      dateCounts,
     });
   } catch (error) {
     if (

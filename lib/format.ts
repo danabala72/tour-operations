@@ -38,14 +38,13 @@ export function formatTime(
   }
 
   if (value instanceof Date) {
-    return value.toLocaleTimeString(
-      "en-GB",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }
-    );
+    const isoTime = value.toISOString().slice(11, 16);
+
+    if (/^\d{2}:\d{2}$/.test(isoTime)) {
+      return isoTime;
+    }
+
+    return "-";
   }
 
   const text = String(value).trim();
@@ -54,8 +53,11 @@ export function formatTime(
     return "-";
   }
 
-  // MySQL TIME: HH:mm:ss
-  if (/^\d{2}:\d{2}(:\d{2})?$/.test(text)) {
+  if (/^\d{2}:\d{2}$/.test(text)) {
+    return text;
+  }
+
+  if (/^\d{2}:\d{2}:\d{2}$/.test(text)) {
     return text.slice(0, 5);
   }
 

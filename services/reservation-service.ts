@@ -9,6 +9,8 @@ export type ReservationFilters = {
   status?: ReservationStatus;
   channel?: string;
   search?: string;
+  jobFilter?: "TODAY" | "UPCOMING";
+  dateFilter?: "ALL" | "TODAY" | "TOMORROW" | "THIS_WEEK";
   page?: number;
   limit?: number;
 };
@@ -29,11 +31,78 @@ export async function getReservations(
     )
   );
 
-  const where: ReservationWhereInput = {};
+  const where = buildReservationWhere(filters);
 
-  // =========================
-  // DATE
-  // =========================
+  const [data, total] =
+    await Promise.all([
+      db.reservation.findMany({
+        where,
+        select: {
+          id: true,
+          supplierBookingId: true,
+          supplierReference: true,
+          tourName: true,
+          tourOption: true,
+          tourDate: true,
+          tourTime: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          paxTotal: true,
+          language: true,
+          pickupTime: true,
+          pickupAddress: true,
+          salePrice: true,
+          netPrice: true,
+          currency: true,
+          status: true,
+          channel: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          { tourDate: "asc" },
+          { tourTime: "asc" },
+          { id: "asc" },
+        ],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      db.reservation.count({ where }),
+    ]);
+
+  const channelCounts = await getChannelCounts(filters);
+
+  return {
+    data: data.map((item) => ({
+      ...item,
+      tourTime: item.tourTime
+        ? item.tourTime.toISOString().slice(11, 16)
+        : null,
+      pickupTime: item.pickupTime
+        ? item.pickupTime.toISOString().slice(11, 16)
+        : null,
+    })),
+
+    channelCounts,
+
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
+function buildReservationWhere(
+  filters: ReservationFilters
+): ReservationWhereInput {
+  const where: ReservationWhereInput = {};
 
   if (filters.date) {
     where.tourDate = new Date(
@@ -58,38 +127,97 @@ export async function getReservations(
         lte: new Date(filters.to),
       };
     }
-  } else {
-    const today = new Date();
-    const next7 = new Date();
-    next7.setDate(today.getDate() + 7);
+  } else if (filters.dateFilter === "TODAY") {
+    const now = new Date();
 
     where.tourDate = {
-      gte: today,
-      lte: next7,
+      equals: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate()
+        )
+      ),
+    };
+  } else if (filters.dateFilter === "TOMORROW") {
+    const now = new Date();
+
+    where.tourDate = {
+      equals: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate() + 1
+        )
+      ),
+    };
+  } else if (filters.dateFilter === "THIS_WEEK") {
+    const now = new Date();
+
+    where.tourDate = {
+      gte: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate()
+        )
+      ),
+      lte: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate() + 6
+        )
+      ),
+    };
+  } else if (filters.jobFilter === "TODAY") {
+    const now = new Date();
+
+    where.tourDate = {
+      equals: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate()
+        )
+      ),
+    };
+  } else if (filters.jobFilter === "UPCOMING") {
+    const now = new Date();
+
+    where.tourDate = {
+      gte: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate() + 1
+        )
+      ),
+    };
+  } else {
+    const now = new Date();
+
+    where.tourDate = {
+      gte: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate()
+        )
+      ),
+      lte: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate() + 7
+        )
+      ),
     };
   }
-
-  // =========================
-  // STATUS
-  // =========================
 
   if (filters.status) {
     where.status = filters.status;
   }
-
-  // =========================
-  // CHANNEL
-  // =========================
-
-  if (filters.channel) {
-    where.channel = {
-      code: filters.channel,
-    };
-  }
-
-  // =========================
-  // SEARCH
-  // =========================
 
   if (filters.search) {
     where.OR = [
@@ -160,42 +288,100 @@ export async function getReservations(
     ];
   }
 
-  // =========================
-  // DATA
-  // =========================
+  return where;
+}
 
-  const [data, total] =
-    await Promise.all([
-      db.reservation.findMany({
-        where,
-        include: {
-          channel: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-            },
-          },
-        },
-        orderBy: [
-          { tourDate: "asc" },
-          { tourTime: "asc" },
-          { id: "asc" },
-        ],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      db.reservation.count({ where }),
-    ]);
+export async function getChannelCounts(
+  filters: ReservationFilters = {}
+) {
+  const where = buildReservationWhere(filters);
 
-  return {
-    data,
+  const allChannels = await db.channel.findMany({
+    select: { id: true, code: true },
+  });
 
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+  const result: Record<string, number> = {};
+
+  for (const ch of allChannels) {
+    const count = await db.reservation.count({
+      where: {
+        ...where,
+        channelId: ch.id,
+      },
+    });
+
+    result[ch.code] = count;
+  }
+
+  return result;
+}
+
+export async function getStatusCounts(
+  filters: ReservationFilters = {}
+) {
+  const where = buildReservationWhere(filters);
+
+  const counts =
+    await db.reservation.groupBy({
+      by: ["status"],
+      where,
+      _count: {
+        _all: true,
+      },
+    });
+
+  const result: Record<string, number> = {};
+
+  for (const item of counts) {
+    result[item.status] = item._count._all;
+  }
+
+  return result;
+}
+
+export async function getDateCounts(
+  filters: ReservationFilters = {}
+) {
+  const baseWhere = buildReservationWhere({
+    ...filters,
+    dateFilter: undefined,
+    date: undefined,
+    from: undefined,
+    to: undefined,
+  });
+
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  const weekEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 6));
+
+  const result: Record<string, number> = {};
+
+  result.ALL = await db.reservation.count({ where: baseWhere });
+
+  result.TODAY = await db.reservation.count({
+    where: {
+      ...baseWhere,
+      tourDate: { equals: today },
     },
-  };
+  });
+
+  result.TOMORROW = await db.reservation.count({
+    where: {
+      ...baseWhere,
+      tourDate: { equals: tomorrow },
+    },
+  });
+
+  result.THIS_WEEK = await db.reservation.count({
+    where: {
+      ...baseWhere,
+      tourDate: {
+        gte: today,
+        lte: weekEnd,
+      },
+    },
+  });
+
+  return result;
 }
