@@ -29,7 +29,7 @@ export function Sidebar() {
       <div className="flex h-16 items-center border-b border-white/10 px-6">
         <div>
           <div className="font-semibold text-white">
-            Tour Operations
+            BTA Booking Board
           </div>
 
           <div className="text-xs text-blue-200">

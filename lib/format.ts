@@ -63,3 +63,32 @@ export function formatTime(
 
   return "-";
 }
+
+export const formatIsoTime = (value: string | null | undefined) => {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return formatTime(date);
+}
+
+export const formatCurrency = (
+  value: number | null | undefined,
+  currency: string | null | undefined
+) => {
+  if (value == null) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency || "USD",
+    minimumFractionDigits: 2,
+  }).format(value);
+}

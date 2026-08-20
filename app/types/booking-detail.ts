@@ -1,0 +1,32 @@
+export interface BookingDetail  {
+  id: number;
+  supplierBookingId: string;
+  supplierReference: string | null;
+  tourName: string;
+  tourOption: string | null;
+  tourDate: string;
+  tourTime: string | null;
+  customerName: string;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  paxTotal: number;
+  language: string | null;
+  pickupTime: string | null;
+  pickupAddress: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  salePrice: number | null;
+  netPrice: number | null;
+  currency: string | null;
+  customerNote: string | null;
+  internalNote: string | null;
+  status: string;
+  bookingUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  channel: {
+    id: number;
+    code: string | null;
+    name: string | null;
+  };
+};

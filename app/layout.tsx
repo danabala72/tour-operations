@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "flag-icons/css/flag-icons.min.css";
 
 export const metadata: Metadata = {
-  title: "Tour Operations",
-  description: "Tour booking operations",
+  title: "BTA Booking Board",
+  description: "Tour booking management tool",
 };
 
 export default function RootLayout({

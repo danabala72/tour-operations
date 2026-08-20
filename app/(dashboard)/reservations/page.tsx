@@ -4,16 +4,13 @@ import { formatDate, formatTime } from "@/lib/format";
 import { useEffect, useRef, useState } from "react";
 import {
   ListFilter,
-  Sparkles,
-  UserCheck,
-  LoaderCircle,
-  CheckCircle2,
-  XCircle,
   XIcon,
   Users,
-  Flag,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { statusFilters } from "@/app/types/style";
+import BulkStatusActionBar from "@/app/components/booking-details/BulkStatusActionBar";
 
 type Reservation = {
   id: number;
@@ -57,44 +54,7 @@ type ApiResponse = {
   message?: string;
 };
 
-const statusFilters = [
-  {
-    value: "",
-    label: "All",
-    icon: ListFilter,
-    color: "text-slate-500",
-  },
-  {
-    value: "NEW",
-    label: "New",
-    icon: Sparkles,
-    color: "text-blue-500",
-  },
-  {
-    value: "ASSIGNED",
-    label: "Assigned",
-    icon: UserCheck,
-    color: "text-amber-500",
-  },
-  {
-    value: "ON_PROGRESS",
-    label: "In Progress",
-    icon: LoaderCircle,
-    color: "text-purple-500",
-  },
-  {
-    value: "DONE",
-    label: "Done",
-    icon: CheckCircle2,
-    color: "text-emerald-500",
-  },
-  {
-    value: "CANCELLED",
-    label: "Cancelled",
-    icon: XCircle,
-    color: "text-red-500",
-  },
-];
+
 
 const channelFilters = [
   {
@@ -155,9 +115,21 @@ export default function ReservationsPage() {
 
   const [error, setError] = useState("");
 
+  const [selectedIds, setSelectedIds] =
+    useState<Set<number>>(new Set());
+
+  const [bulkStatus, setBulkStatus] =
+    useState("");
+
+  const [applying, setApplying] =
+    useState(false);
+
   async function loadReservations(page = 1) {
     setLoading(true);
     setError("");
+    setSelectedIds(new Set());
+    setBulkStatus("");
+    setApplying(false);
 
     try {
       const params = new URLSearchParams();
@@ -226,6 +198,107 @@ export default function ReservationsPage() {
       window.clearTimeout(timer);
     };
   }, [search]);
+
+  const idsOnPage = data.map((r) => r.id);
+
+  const allSelected =
+    idsOnPage.length > 0 &&
+    idsOnPage.every((id) => selectedIds.has(id));
+
+  const someSelected =
+    idsOnPage.some((id) => selectedIds.has(id)) &&
+    !allSelected;
+
+  function toggleSelect(
+    id: number,
+    checked: boolean
+  ) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) =>
+      allSelected ? new Set() : new Set(idsOnPage)
+    );
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+    setBulkStatus("");
+  }
+
+  async function applyBulkStatus() {
+    if (!selectedIds.size || !bulkStatus || applying) {
+      return;
+    }
+
+    const ids = Array.from(selectedIds);
+
+    const before = new Map(
+      data.map((r) => [r.id, r.status])
+    );
+
+    setData((prev) =>
+      prev.map((r) =>
+        selectedIds.has(r.id)
+          ? { ...r, status: bulkStatus }
+          : r
+      )
+    );
+
+    setApplying(true);
+
+    try {
+      const response = await fetch(
+        "/api/reservations/bulk",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ids,
+            status: bulkStatus,
+          }),
+        }
+      );
+
+      const json = (await response.json()) as {
+        success: boolean;
+        message?: string;
+      };
+
+      if (!response.ok || !json.success) {
+        throw new Error(
+          json.message ?? "Failed to update status."
+        );
+      }
+
+      clearSelection();
+    } catch (err) {
+      setData((prev) =>
+        prev.map((r) => {
+          const s = before.get(r.id);
+
+          return s !== undefined
+            ? { ...r, status: s }
+            : r;
+        })
+      );
+    } finally {
+      setApplying(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
@@ -525,7 +598,7 @@ export default function ReservationsPage() {
 
       {/* Result count */}
       <div className="text-sm text-[var(--muted)]">
-        {loading ? "Loading..." : `${pagination.total} reservations`}
+        {loading ? "Loading..." : ``}
       </div>
 
       {/* Mobile list */}
@@ -543,6 +616,18 @@ export default function ReservationsPage() {
         )}
       </div>
 
+      {/* Bulk action bar */}
+      {!loading && selectedIds.size > 0 && (
+        <BulkStatusActionBar
+          selectedCount={selectedIds.size}
+          value={bulkStatus}
+          onChange={setBulkStatus}
+          onApply={applyBulkStatus}
+          applying={applying}
+          onClear={clearSelection}
+        />
+      )}
+
       {/* Desktop table */}
       <div className="hidden overflow-hidden rounded-xl bg-white lg:block">
         {loading ? (
@@ -552,7 +637,13 @@ export default function ReservationsPage() {
         ) : data.length === 0 ? (
           <EmptyState />
         ) : (
-          <ReservationTable reservations={data} />
+          <ReservationTable
+            reservations={data}
+            selectedIds={selectedIds}
+            onSelectAll={toggleSelectAll}
+            onToggleSelect={toggleSelect}
+            selectDisabled={applying}
+          />
         )}
       </div>
 
@@ -667,9 +758,8 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
             <span>{reservation.channel.code ?? "-"}</span>
           )}
 
-          <span className="inline-flex items-center gap-1.5">
-            <Flag size={14} strokeWidth={1.9} />
-            {reservation.language ?? "-"}
+          <span className="text-xs font-medium text-slate-500">
+            <span className={`fi fi-${reservation.language?.toLowerCase()}`} />
           </span>
         </div>
 
@@ -692,8 +782,8 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
             #{reservation.supplierBookingId}
           </span>
 
-          <button
-            type="button"
+          <Link
+            href={`/reservations/${reservation.id}`}
             className="
               cursor-pointer
               rounded-lg
@@ -709,31 +799,79 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
             "
           >
             View details →
-          </button>
+          </Link>
         </div>
       </div>
     </div>
   );
 }
 
-function ReservationTable({ reservations }: { reservations: Reservation[] }) {
+function ReservationTable({
+  reservations,
+  selectedIds,
+  onSelectAll,
+  onToggleSelect,
+  selectDisabled,
+}: {
+  reservations: Reservation[];
+  selectedIds: Set<number>;
+  onSelectAll: () => void;
+  onToggleSelect: (
+    id: number,
+    checked: boolean
+  ) => void;
+  selectDisabled: boolean;
+}) {
+  const ids = reservations.map((r) => r.id);
+
+  const allSelected =
+    ids.length > 0 &&
+    ids.every((id) => selectedIds.has(id));
+
+  const someSelected =
+    ids.some((id) => selectedIds.has(id)) &&
+    !allSelected;
+
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate =
+        someSelected;
+    }
+  });
+
+  const checkboxClass =
+    "h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60";
+
   return (
     <div className="hidden lg:block">
       <div
         className="
-    hidden
-    overflow-hidden
-    rounded-2xl
-    border
-    border-slate-200/60
-    bg-white
-    shadow-[0_8px_30px_rgba(15,23,42,0.05)]
-    lg:block
-  "
+        hidden
+        overflow-hidden
+        rounded-2xl
+        border
+        border-slate-200/60
+        bg-white
+        shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+        lg:block
+      "
       >
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs font-medium uppercase tracking-wide text-slate-400">
+              <th className="px-4 py-3">
+                <input
+                  type="checkbox"
+                  ref={selectAllRef}
+                  checked={allSelected}
+                  onChange={() => onSelectAll()}
+                  disabled={selectDisabled}
+                  className={checkboxClass}
+                />
+              </th>
+
               <th className="px-5 py-4">Date</th>
 
               <th className="px-5 py-4">Customer</th>
@@ -743,6 +881,7 @@ function ReservationTable({ reservations }: { reservations: Reservation[] }) {
               <th className="px-5 py-4">Pax</th>
 
               <th className="px-5 py-4">Channel</th>
+              <th className="px-5 py-4">Language</th>
 
               <th className="px-5 py-4">Status</th>
 
@@ -763,6 +902,23 @@ function ReservationTable({ reservations }: { reservations: Reservation[] }) {
               hover:bg-blue-50/30
             "
               >
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(
+                      reservation.id
+                    )}
+                    onChange={(event) =>
+                      onToggleSelect(
+                        reservation.id,
+                        event.target.checked
+                      )
+                    }
+                    disabled={selectDisabled}
+                    className={checkboxClass}
+                  />
+                </td>
+
                 <td className="px-5 py-4">
                   <div className="font-medium text-slate-800">
                     {formatDate(reservation.tourDate)}
@@ -806,32 +962,37 @@ function ReservationTable({ reservations }: { reservations: Reservation[] }) {
                     {reservation.channel.code ?? "-"}
                   </span>
                 </td>
+                 <td className="px-5 py-4">
+                  <span className="text-xs font-medium text-slate-500">
+                    <span className={`fi fi-${reservation.language?.toLowerCase()}`} />
+                  </span>
+                </td>
 
                 <td className="px-5 py-4">
                   <StatusBadge status={reservation.status} />
                 </td>
 
                 <td className="px-5 py-4 text-right">
-                  <button
-                    type="button"
+                  <Link
+                    href={`/reservations/${reservation.id}`}
                     className="
-                  cursor-pointer
-                  rounded-lg
-                  px-3
-                  py-2
-                  text-xs
-                  font-medium
-                  text-blue-600
-                  opacity-70
-                  transition-all
-                  duration-200
-                  group-hover:translate-x-0.5
-                  group-hover:bg-blue-50
-                  group-hover:opacity-100
-                "
+                    cursor-pointer
+                    rounded-lg
+                    px-3
+                    py-2
+                    text-xs
+                    font-medium
+                    text-blue-600
+                    opacity-70
+                    transition-all
+                    duration-200
+                    group-hover:translate-x-0.5
+                    group-hover:bg-blue-50
+                    group-hover:opacity-100
+                  "
                   >
                     View →
-                  </button>
+                  </Link>
                 </td>
               </tr>
             ))}

@@ -4,8 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 function getTitle(pathname: string) {
-  if (pathname.startsWith("/reservations")) {
+  if (pathname === "/reservations" || pathname === "/reservations/") {
     return "Reservations";
+  }
+
+  if (pathname.startsWith("/reservations/")) {
+    return "Booking Details";
   }
 
   if (pathname.startsWith("/drivers")) {
