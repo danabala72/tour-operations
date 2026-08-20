@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   XCircle,
   XIcon,
+  Users,
+  Flag,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -116,6 +118,12 @@ const channelFilters = [
     logo: "/channels/viator.png",
   },
 ];
+
+const channelLogoMap: Record<string, string> = {
+  CIVITATIS: "/channels/civitatis.png",
+  GYG: "/channels/gyg.png",
+  VIATOR: "/channels/viator.png",
+};
 
 export default function ReservationsPage() {
   const [data, setData] = useState<Reservation[]>([]);
@@ -305,28 +313,30 @@ export default function ReservationsPage() {
               onClick={() => setChannel(item.value)}
               title={item.label}
               aria-label={item.label}
-              className={`
-                    flex
-                    size-11
-                    shrink-0
-                    cursor-pointer
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    border
-                    text-sm
-                    font-medium
-                    transition-all
-                    duration-200
-                    sm:h-10
-                    sm:w-auto
-                    sm:px-3.5
-                    ${
-                      active
-                        ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
-                        : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
+              className={`flex
+                h-9
+                sm:h-10
+                w-auto
+                shrink-0
+                cursor-pointer
+                items-center
+                justify-center
+                gap-1.5
+                sm:gap-2
+                rounded-xl
+                border
+                text-xs
+                sm:text-sm
+                font-medium
+                transition-all
+                duration-200
+                px-2.5
+                sm:px-3.5
+                ${
+                  active
+                    ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
+                    : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+                }`}
             >
               {item.logo ? (
                 <Image
@@ -335,7 +345,7 @@ export default function ReservationsPage() {
                   width={48}
                   height={48}
                   className={`
-                          size-6
+                          size-4
                           sm:size-4                         
                         `}
                 />
@@ -345,7 +355,7 @@ export default function ReservationsPage() {
 
                   return (
                     <Icon
-                      size={24}
+                      size={16}
                       strokeWidth={1.9}
                       className={`
                               sm:size-4                              
@@ -389,20 +399,23 @@ export default function ReservationsPage() {
               title={item.label}
               aria-label={item.label}
               className={`flex
-                size-11
+                h-9
+                sm:h-10
+                w-auto
                 shrink-0
                 cursor-pointer
                 items-center
                 justify-center
-                gap-2
+                gap-1.5
+                sm:gap-2
                 rounded-xl
                 border
-                text-sm
+                text-xs
+                sm:text-sm
                 font-medium
                 transition-all
                 duration-200
-                sm:h-10
-                sm:w-auto
+                px-2.5
                 sm:px-3.5
                 ${
                   active
@@ -412,7 +425,7 @@ export default function ReservationsPage() {
               `}
             >
               <Icon
-                size={24}
+                size={16}
                 strokeWidth={1.9}
                 className={`
                   ${item.color}
@@ -420,6 +433,7 @@ export default function ReservationsPage() {
                 `}
               />
 
+              <span className="sm:hidden">{item.label}</span>
               <span className="hidden sm:inline">{item.label}</span>
 
               <span
@@ -466,20 +480,23 @@ export default function ReservationsPage() {
               title={item.label}
               aria-label={item.label}
               className={`flex
-                size-11
+                h-9
+                sm:h-10
+                w-auto
                 shrink-0
                 cursor-pointer
                 items-center
                 justify-center
-                gap-2
+                gap-1.5
+                sm:gap-2
                 rounded-xl
                 border
-                text-sm
+                text-xs
+                sm:text-sm
                 font-medium
                 transition-all
                 duration-200
-                sm:h-10
-                sm:w-auto
+                px-2.5
                 sm:px-3.5
                 ${
                   active
@@ -487,8 +504,8 @@ export default function ReservationsPage() {
                     : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
                 }`}
             >
+              <span className="sm:hidden">{item.label}</span>
               <span className="hidden sm:inline">{item.label}</span>
-              <span className="sm:hidden">{item.label.slice(0, 2)}</span>
 
               <span
                 className={`text-xs ${
@@ -592,11 +609,15 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-500">
-                {formatTime(reservation.tourTime)}
-              </span>
+              {reservation.tourTime && (
+                <>
+                  <span className="text-sm font-semibold text-slate-500">
+                    {formatTime(reservation.tourTime)}
+                  </span>
 
-              <span className="text-slate-300">•</span>
+                  <span className="text-slate-300">•</span>
+                </>
+              )}
 
               <span className="text-xs text-slate-400">
                 {formatDate(reservation.tourDate)}
@@ -625,12 +646,31 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
         </div>
 
         {/* Meta */}
-        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
-          <span>👥 {reservation.paxTotal} pax</span>
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500">
+          <span className="inline-flex items-center gap-1.5">
+            <Users size={14} strokeWidth={1.9} />
+            {reservation.paxTotal} pax
+          </span>
 
-          <span>🌐 {reservation.channel.code ?? "-"}</span>
+          {reservation.channel.code && channelLogoMap[reservation.channel.code] ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Image
+                src={channelLogoMap[reservation.channel.code]}
+                alt={reservation.channel.name ?? reservation.channel.code}
+                width={16}
+                height={16}
+                className="size-4"
+              />
+              {reservation.channel.code}
+            </span>
+          ) : (
+            <span>{reservation.channel.code ?? "-"}</span>
+          )}
 
-          <span>🗣️ {reservation.language ?? "-"}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <Flag size={14} strokeWidth={1.9} />
+            {reservation.language ?? "-"}
+          </span>
         </div>
 
         {/* Pickup */}
@@ -728,9 +768,11 @@ function ReservationTable({ reservations }: { reservations: Reservation[] }) {
                     {formatDate(reservation.tourDate)}
                   </div>
 
-                  <div className="mt-0.5 text-xs text-slate-400">
-                    {formatTime(reservation.tourTime)}
-                  </div>
+                  {reservation.tourTime && (
+                    <div className="mt-0.5 text-xs text-slate-400">
+                      {formatTime(reservation.tourTime)}
+                    </div>
+                  )}
                 </td>
 
                 <td className="px-5 py-4">
