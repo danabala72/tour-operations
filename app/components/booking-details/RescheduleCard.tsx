@@ -78,7 +78,7 @@ const RescheduleCard = ({
       title="Reschedule"
       icon={RefreshCcw}
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {message && (
           <div
             className={cn(
@@ -101,32 +101,18 @@ const RescheduleCard = ({
           </div>
         )}
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="relative flex-1">
-            <label className="mb-1 block text-xs text-slate-500">
-              New tour date
-            </label>
+        <div className="flex items-end gap-2">
+          <div className="relative w-full max-w-[220px]">
+            <input
+              ref={inputRef}
+              type="date"
+              value={targetDate}
+              min={minDate}
+              onChange={(event) => setTargetDate(event.target.value)}
+              className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 pr-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
 
-            <div className="relative">
-              <input
-                ref={inputRef}
-                type="date"
-                value={targetDate}
-                min={minDate}
-                onChange={(event) =>
-                  setTargetDate(event.target.value)
-                }
-                className={cn(
-                  "w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                )}
-              />
-
-              <CalendarIcon
-                size={14}
-                strokeWidth={1.9}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-            </div>
+            
           </div>
 
           <button
@@ -134,18 +120,18 @@ const RescheduleCard = ({
             onClick={handleSubmit}
             disabled={loading || !targetDate}
             className={cn(
-              "inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60",
+              "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-blue-600 bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60",
               loading && "cursor-wait"
             )}
           >
             {loading ? (
               <LoaderCircle
-                size={14}
+                size={12}
                 strokeWidth={2}
                 className="animate-spin"
               />
             ) : (
-              <RefreshCcw size={14} strokeWidth={2} />
+              <RefreshCcw size={12} strokeWidth={2} />
             )}
 
             <span>Reschedule</span>
