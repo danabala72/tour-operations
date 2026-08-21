@@ -59,6 +59,7 @@ export async function GET(
             | "TODAY"
             | "TOMORROW"
             | "THIS_WEEK"
+            | "PREVIOUS"
             | undefined,
 
         page: Number(
@@ -112,6 +113,7 @@ export async function GET(
             | "TODAY"
             | "TOMORROW"
             | "THIS_WEEK"
+            | "PREVIOUS"
             | undefined,
       });
 
@@ -150,6 +152,7 @@ export async function GET(
             | "TODAY"
             | "TOMORROW"
             | "THIS_WEEK"
+            | "PREVIOUS"
             | undefined,
       });
 
@@ -196,6 +199,7 @@ export async function GET(
             | "TODAY"
             | "TOMORROW"
             | "THIS_WEEK"
+            | "PREVIOUS"
             | undefined,
       });
 

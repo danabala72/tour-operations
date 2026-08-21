@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { ReservationWhereInput } from "@/lib/generated/prisma/models/Reservation";
 import type { ReservationStatus } from "@/lib/generated/prisma/enums";
+import { formatDateOnly } from "@/lib/format";
 
 export type ReservationFilters = {
   date?: string;
@@ -10,7 +11,7 @@ export type ReservationFilters = {
   channel?: string;
   search?: string;
   jobFilter?: "TODAY" | "UPCOMING";
-  dateFilter?: "ALL" | "TODAY" | "TOMORROW" | "THIS_WEEK";
+  dateFilter?: "ALL" | "TODAY" | "TOMORROW" | "THIS_WEEK" | "PREVIOUS";
   page?: number;
   limit?: number;
 };
@@ -56,6 +57,8 @@ export async function getReservations(
           netPrice: true,
           currency: true,
           status: true,
+          rescheduleDate: true,
+          rescheduledFrom: true,
           channel: {
             select: {
               id: true,
@@ -81,10 +84,16 @@ export async function getReservations(
     data: data.map((item) => ({
       ...item,
       tourTime: item.tourTime
-        ? item.tourTime.toISOString().slice(11, 16)
+        ? `${String(item.tourTime.getUTCHours()).padStart(2, "0")}:${String(item.tourTime.getUTCMinutes()).padStart(2, "0")}`
         : null,
       pickupTime: item.pickupTime
-        ? item.pickupTime.toISOString().slice(11, 16)
+        ? `${String(item.pickupTime.getUTCHours()).padStart(2, "0")}:${String(item.pickupTime.getUTCMinutes()).padStart(2, "0")}`
+        : null,
+      rescheduleDate: item.rescheduleDate
+        ? formatDateOnly(item.rescheduleDate)
+        : null,
+      rescheduledFrom: item.rescheduledFrom
+        ? formatDateOnly(item.rescheduledFrom)
         : null,
     })),
 
@@ -148,6 +157,18 @@ function buildReservationWhere(
           now.getUTCFullYear(),
           now.getUTCMonth(),
           now.getUTCDate() + 1
+        )
+      ),
+    };
+  } else if (filters.dateFilter === "PREVIOUS") {
+    const now = new Date();
+
+    where.tourDate = {
+      lt: new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate()
         )
       ),
     };
@@ -217,6 +238,12 @@ function buildReservationWhere(
 
   if (filters.status) {
     where.status = filters.status;
+  }
+
+  if (filters.channel) {
+    where.channel = {
+      code: filters.channel,
+    };
   }
 
   if (filters.search) {
@@ -379,6 +406,15 @@ export async function getDateCounts(
       tourDate: {
         gte: today,
         lte: weekEnd,
+      },
+    },
+  });
+
+  result.PREVIOUS = await db.reservation.count({
+    where: {
+      ...baseWhere,
+      tourDate: {
+        lt: today,
       },
     },
   });

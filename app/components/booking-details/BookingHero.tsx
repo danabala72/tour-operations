@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { BookingDetail } from "../../types/booking-detail";
 import { channelLogoMap } from "../../types/channel";
-import { ExternalLink, User } from "lucide-react";
+import { ExternalLink, User, RefreshCcw } from "lucide-react";
 import { formatDate, formatIsoTime } from "@/lib/format";
 import StatusBadge from "./StatusBadge";
 
@@ -128,6 +128,13 @@ const BookingHero = ({ booking }: { booking: BookingDetail }) => {
           <div className="mt-0.5 text-sm text-slate-500">
             {formatIsoTime(booking.tourTime)}
           </div>
+
+          {booking.rescheduledFrom && (
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+              <RefreshCcw size={12} strokeWidth={2} />
+              Rescheduled from {formatDate(booking.rescheduledFrom)}
+            </div>
+          )}
         </div>
       </div>
 

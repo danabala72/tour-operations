@@ -120,6 +120,8 @@ model Reservation {
 
   status ReservationStatus @default(NEW)
   bookingUrl String? @map("booking_url") @db.VarChar(500)
+  rescheduleDate DateTime? @map("reschedule_date") @db.Date
+  rescheduledFrom DateTime? @map("rescheduled_from") @db.Date
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 

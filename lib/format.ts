@@ -1,3 +1,25 @@
+export function formatDateOnly(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+export function parseDateOnly(value: string): Date {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return new Date(NaN);
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+
+  return new Date(Date.UTC(year, month, day));
+}
+
 export function formatDate(
   value: string | Date | null | undefined
 ) {
@@ -13,7 +35,7 @@ export function formatDate(
     const text = String(value).trim();
 
     if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-      date = new Date(`${text}T00:00:00`);
+      date = parseDateOnly(text);
     } else {
       date = new Date(text);
     }
@@ -38,13 +60,10 @@ export function formatTime(
   }
 
   if (value instanceof Date) {
-    const isoTime = value.toISOString().slice(11, 16);
+    const hours = String(value.getUTCHours()).padStart(2, "0");
+    const minutes = String(value.getUTCMinutes()).padStart(2, "0");
 
-    if (/^\d{2}:\d{2}$/.test(isoTime)) {
-      return isoTime;
-    }
-
-    return "-";
+    return `${hours}:${minutes}`;
   }
 
   const text = String(value).trim();
@@ -59,6 +78,15 @@ export function formatTime(
 
   if (/^\d{2}:\d{2}:\d{2}$/.test(text)) {
     return text.slice(0, 5);
+  }
+
+  const date = new Date(text);
+
+  if (!Number.isNaN(date.getTime())) {
+    const hours = String(date.getUTCHours()).padStart(2, "0");
+    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
   }
 
   return "-";

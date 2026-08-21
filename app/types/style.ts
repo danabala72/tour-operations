@@ -38,11 +38,5 @@ export const statusFilters = [
     label: "Done",
     icon: CheckCircle2,
     color: "text-emerald-500",
-  },
-  {
-    value: "CANCELLED",
-    label: "Cancelled",
-    icon: XCircle,
-    color: "text-red-500",
-  },
+  }
 ];

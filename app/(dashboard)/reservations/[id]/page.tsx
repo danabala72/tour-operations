@@ -14,6 +14,7 @@ import PricingCard from "@/app/components/booking-details/PricingCard";
 import NotesCard from "@/app/components/booking-details/NotesCard";
 import MetadataCard from "@/app/components/booking-details/MetaDataCard";
 import StatusUpdateCard from "@/app/components/booking-details/StatusUpdateCard";
+import RescheduleCard from "@/app/components/booking-details/RescheduleCard";
 import { BookingDetail } from "@/app/types/booking-detail";
 
 type ApiError = {
@@ -162,6 +163,70 @@ export default function BookingDetailPage() {
     }
   }
 
+  async function handleReschedule(
+    nextDate: string
+  ) {
+    if (!booking) {
+      return {
+        ok: false,
+        message: "No booking loaded.",
+      };
+    }
+
+    const previous = booking.tourDate;
+
+    setBooking((b) =>
+      b ? { ...b, tourDate: nextDate, rescheduleDate: nextDate, rescheduledFrom: b.rescheduledFrom ?? b.tourDate } : b
+    );
+
+    try {
+      const response = await fetch(
+        `/api/reservations/${id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: booking.status,
+            rescheduleDate: nextDate,
+          }),
+        }
+      );
+
+      const json = (await response.json()) as
+        | ApiSuccess
+        | ApiError;
+
+      if (!json.success) {
+        throw new Error(
+          json.message ?? "Failed to reschedule."
+        );
+      }
+
+      if (json.data) {
+        setBooking(json.data);
+      }
+
+      return {
+        ok: true,
+        message: "Booking rescheduled.",
+      };
+    } catch (err) {
+      setBooking((b) =>
+        b ? { ...b, tourDate: previous, rescheduleDate: b.rescheduleDate, rescheduledFrom: b.rescheduledFrom } : b
+      );
+
+      return {
+        ok: false,
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to reschedule.",
+      };
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl">
       {/* Header */}
@@ -269,6 +334,15 @@ export default function BookingDetailPage() {
               <StatusUpdateCard
                 currentStatus={booking.status}
                 onUpdate={handleStatusUpdate}
+              />
+            </section>
+
+            <section className="sm:col-span-2">
+              <RescheduleCard
+                tourDate={booking.tourDate}
+                rescheduledFrom={booking.rescheduledFrom}
+                status={booking.status}
+                onReschedule={handleReschedule}
               />
             </section>
 

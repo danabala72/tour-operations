@@ -5,6 +5,7 @@ import type {
   LanguageStat,
   Series,
 } from "@/app/types/dashboard";
+import { formatDateOnly, parseDateOnly } from "@/lib/format";
 
 const CHANNEL_COLORS: Record<string, string> = {
   CIVITATIS: "text-blue-500",
@@ -16,10 +17,6 @@ function channelColor(code: string | null) {
   return code ? CHANNEL_COLORS[code] ?? "text-slate-500" : "text-slate-500";
 }
 
-function toDateId(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
 export async function getStats(filters: {
   from?: string;
   to?: string;
@@ -27,11 +24,15 @@ export async function getStats(filters: {
   const today = new Date();
 
   const fromDate = filters.from
-    ? new Date(`${filters.from}T00:00:00Z`)
+    ? parseDateOnly(filters.from)
     : new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const toDate = filters.to
-    ? new Date(`${filters.to}T23:59:59Z`)
+    ? (() => {
+        const parsed = parseDateOnly(filters.to);
+        parsed.setUTCHours(23, 59, 59, 999);
+        return parsed;
+      })()
     : today;
 
   const where = {
@@ -113,7 +114,7 @@ export async function getStats(filters: {
   >();
 
   for (const group of perDateGroup) {
-    const date = toDateId(group.tourDate as unknown as Date);
+    const date = formatDateOnly(group.tourDate as unknown as Date);
     const channelId = Number(group.channelId);
 
     dateSet.add(date);

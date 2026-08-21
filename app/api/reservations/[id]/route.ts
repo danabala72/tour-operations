@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
 import { ReservationStatus } from "@/lib/generated/prisma/enums";
+import { formatDateOnly } from "@/lib/format";
 
 const VALID_STATUSES = new Set<string>(
   Object.values(ReservationStatus)
@@ -11,6 +12,14 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+function formatReservationDate(value: Date | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return formatDateOnly(value);
+}
 
 export async function GET(
   _request: Request,
@@ -59,7 +68,18 @@ export async function GET(
 
     return Response.json({
       success: true,
-      data: reservation,
+      data: {
+        ...reservation,
+        tourDate: formatReservationDate(reservation.tourDate),
+        tourTime: reservation.tourTime
+          ? `${String(reservation.tourTime.getUTCHours()).padStart(2, "0")}:${String(reservation.tourTime.getUTCMinutes()).padStart(2, "0")}`
+          : null,
+        pickupTime: reservation.pickupTime
+          ? `${String(reservation.pickupTime.getUTCHours()).padStart(2, "0")}:${String(reservation.pickupTime.getUTCMinutes()).padStart(2, "0")}`
+          : null,
+        rescheduleDate: formatReservationDate(reservation.rescheduleDate),
+        rescheduledFrom: formatReservationDate(reservation.rescheduledFrom),
+      },
     });
   } catch (error) {
     if (
@@ -128,9 +148,11 @@ export async function PATCH(
       .json()
       .catch(() => null)) as {
       status?: unknown;
+      rescheduleDate?: unknown;
     } | null;
 
     const nextStatus = body?.status;
+    const rescheduleDate = body?.rescheduleDate;
 
     if (
       typeof nextStatus !== "string" ||
@@ -145,15 +167,63 @@ export async function PATCH(
       );
     }
 
+    if (
+      typeof rescheduleDate !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(rescheduleDate)
+    ) {
+      return Response.json(
+        {
+          success: false,
+          message: "Invalid reschedule date.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const current =
+      await db.reservation.findUnique({
+        where: { id: reservationId },
+        select: {
+          id: true,
+          tourDate: true,
+          rescheduleDate: true,
+          rescheduledFrom: true,
+        },
+      });
+
+    if (!current) {
+      return Response.json(
+        {
+          success: false,
+          message: "Reservation not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    const [year, month, day] = rescheduleDate.split("-").map(Number);
+    const newTourDate = new Date(Date.UTC(year, month - 1, day));
+
+    const data: Record<string, unknown> = {
+      status: nextStatus as ReservationStatus,
+    };
+
+    if (newTourDate.getTime() !== current.tourDate.getTime()) {
+      data.tourDate = newTourDate;
+      data.rescheduleDate = newTourDate;
+
+      if (!current.rescheduledFrom) {
+        data.rescheduledFrom = current.tourDate;
+      }
+    }
+
     let updated;
 
     try {
       updated =
         await db.reservation.update({
           where: { id: reservationId },
-          data: {
-            status: nextStatus as ReservationStatus,
-          },
+          data,
           include: {
             channel: {
               select: {
@@ -184,7 +254,18 @@ export async function PATCH(
 
     return Response.json({
       success: true,
-      data: updated,
+      data: {
+        ...updated,
+        tourDate: formatReservationDate(updated.tourDate as Date),
+        tourTime: updated.tourTime
+          ? `${String((updated.tourTime as Date).getUTCHours()).padStart(2, "0")}:${String((updated.tourTime as Date).getUTCMinutes()).padStart(2, "0")}`
+          : null,
+        pickupTime: updated.pickupTime
+          ? `${String((updated.pickupTime as Date).getUTCHours()).padStart(2, "0")}:${String((updated.pickupTime as Date).getUTCMinutes()).padStart(2, "0")}`
+          : null,
+        rescheduleDate: formatReservationDate(updated.rescheduleDate as Date | null),
+        rescheduledFrom: formatReservationDate(updated.rescheduledFrom as Date | null),
+      },
     });
   } catch (error) {
     if (

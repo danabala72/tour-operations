@@ -6,6 +6,7 @@ import {
   ListFilter,
   XIcon,
   Users,
+  RefreshCcw,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,6 +36,8 @@ type Reservation = {
     code: string | null;
     name: string | null;
   };
+  rescheduleDate: string | null;
+  rescheduledFrom: string | null;
 };
 
 type Pagination = {
@@ -181,7 +184,13 @@ export default function ReservationsPage() {
   }
 
   useEffect(() => {
-    loadReservations(1);
+    const timer = window.setTimeout(() => {
+      loadReservations(1);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [status, channel, dateFilter]);
 
   useEffect(() => {
@@ -405,10 +414,9 @@ export default function ReservationsPage() {
                 duration-200
                 px-2.5
                 sm:px-3.5
-                ${
-                  active
-                    ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
-                    : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+                ${active
+                  ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
+                  : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
                 }`}
             >
               {item.logo ? (
@@ -441,11 +449,10 @@ export default function ReservationsPage() {
               <span className="hidden sm:inline">{item.label}</span>
 
               <span
-                className={`text-xs ${
-                  active
+                className={`text-xs ${active
                     ? "text-blue-600"
                     : "text-slate-400"
-                }`}
+                  }`}
               >
                 {item.value === ""
                   ? Object.values(channelCounts).reduce((sum, count) => sum + count, 0)
@@ -490,10 +497,9 @@ export default function ReservationsPage() {
                 duration-200
                 px-2.5
                 sm:px-3.5
-                ${
-                  active
-                    ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
-                    : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+                ${active
+                  ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
+                  : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
                 }
               `}
             >
@@ -510,11 +516,10 @@ export default function ReservationsPage() {
               <span className="hidden sm:inline">{item.label}</span>
 
               <span
-                className={`text-xs ${
-                  active
+                className={`text-xs ${active
                     ? "text-blue-600"
                     : "text-slate-400"
-                }`}
+                  }`}
               >
                 {item.value === ""
                   ? Object.values(statusCounts).reduce((sum, count) => sum + count, 0)
@@ -541,6 +546,10 @@ export default function ReservationsPage() {
           {
             value: "TOMORROW",
             label: "Tomorrow",
+          },
+          {
+            value: "PREVIOUS",
+            label: "Previous",
           }
         ].map((item) => {
           const active = dateFilter === item.value;
@@ -571,21 +580,19 @@ export default function ReservationsPage() {
                 duration-200
                 px-2.5
                 sm:px-3.5
-                ${
-                  active
-                    ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
-                    : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+                ${active
+                  ? "border-blue-600 shadow-[0_4px_14px_rgba(37,99,235,0.18)]"
+                  : "border-slate-200/70 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
                 }`}
             >
               <span className="sm:hidden">{item.label}</span>
               <span className="hidden sm:inline">{item.label}</span>
 
               <span
-                className={`text-xs ${
-                  active
+                className={`text-xs ${active
                     ? "text-blue-600"
                     : "text-slate-400"
-                }`}
+                  }`}
               >
                 {item.value === ""
                   ? Object.values(dateCounts).reduce((sum, count) => sum + count, 0)
@@ -608,24 +615,50 @@ export default function ReservationsPage() {
         ) : data.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="space-y-4">
-            {data.map((reservation) => (
-              <ReservationCard key={reservation.id} reservation={reservation} />
-            ))}
-          </div>
+          <>
+            <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                disabled={applying}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+
+              <span className="text-sm text-slate-700">
+                {allSelected ? "Deselect all" : "Select all"}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {data.map((reservation) => (
+                <ReservationCard
+                  key={reservation.id}
+                  reservation={reservation}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  selectDisabled={applying}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       {/* Bulk action bar */}
       {!loading && selectedIds.size > 0 && (
-        <BulkStatusActionBar
-          selectedCount={selectedIds.size}
-          value={bulkStatus}
-          onChange={setBulkStatus}
-          onApply={applyBulkStatus}
-          applying={applying}
-          onClear={clearSelection}
-        />
+        <div className="fixed inset-x-0 bottom-12 z-40 lg:relative lg:bottom-auto lg:z-auto lg:mt-4">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <BulkStatusActionBar
+              selectedCount={selectedIds.size}
+              value={bulkStatus}
+              onChange={setBulkStatus}
+              onApply={applyBulkStatus}
+              applying={applying}
+              onClear={clearSelection}
+            />
+          </div>
+        </div>
       )}
 
       {/* Desktop table */}
@@ -655,7 +688,17 @@ export default function ReservationsPage() {
   );
 }
 
-function ReservationCard({ reservation }: { reservation: Reservation }) {
+function ReservationCard({
+  reservation,
+  selectedIds,
+  onToggleSelect,
+  selectDisabled
+}: {
+  reservation: Reservation;
+  selectedIds: Set<number>;
+  onToggleSelect: (id: number, checked: boolean) => void;
+  selectDisabled: boolean;
+}) {
   console.log(reservation);
   return (
     <div
@@ -698,26 +741,36 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
       <div className="relative">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              {reservation.tourTime && (
-                <>
-                  <span className="text-sm font-semibold text-slate-500">
-                    {formatTime(reservation.tourTime)}
-                  </span>
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={selectedIds.has(reservation.id)}
+              onChange={(event) =>
+                onToggleSelect(reservation.id, event.target.checked)
+              }
+              disabled={selectDisabled}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+            />
 
-                  <span className="text-slate-300">•</span>
-                </>
-              )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                {reservation.tourTime && (
+                  <>
+                    <span className="text-sm font-semibold text-slate-500">
+                      {formatTime(reservation.tourTime)}
+                    </span>
 
-              <span className="text-xs text-slate-400">
-                {formatDate(reservation.tourDate)}
-              </span>
+                    <span className="text-slate-300">•</span>
+                  </>
+                )}
+
+                <span className="text-xs text-slate-400">
+                  {formatDate(reservation.tourDate)}
+                </span>
+              </div>
+
+
             </div>
-
-            <h3 className="mt-1 truncate text-base font-semibold text-slate-900">
-              {reservation.customerName}
-            </h3>
           </div>
 
           <StatusBadge status={reservation.status} />
@@ -725,6 +778,9 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
 
         {/* Tour */}
         <div className="mt-4">
+          <h3 className="mt-1 truncate text-base font-semibold text-slate-900">
+            {reservation.customerName}
+          </h3>
           <div className="font-medium text-slate-800">
             {reservation.tourName}
           </div>
@@ -732,6 +788,13 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
           {reservation.tourOption && (
             <div className="mt-1 text-sm text-slate-500">
               {reservation.tourOption}
+            </div>
+          )}
+
+          {reservation.rescheduledFrom && (
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+              <RefreshCcw size={12} strokeWidth={2} />
+              Rescheduled from {formatDate(reservation.rescheduledFrom)} to {formatDate(reservation.tourDate)}
             </div>
           )}
         </div>
@@ -951,6 +1014,13 @@ function ReservationTable({
                       {reservation.tourOption}
                     </div>
                   )}
+
+                  {reservation.rescheduledFrom && (
+                    <div className="mt-1 inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+                      <RefreshCcw size={10} strokeWidth={2} />
+                      From {formatDate(reservation.rescheduledFrom)}
+                    </div>
+                  )}
                 </td>
 
                 <td className="px-5 py-4 text-slate-600">
@@ -962,7 +1032,7 @@ function ReservationTable({
                     {reservation.channel.code ?? "-"}
                   </span>
                 </td>
-                 <td className="px-5 py-4">
+                <td className="px-5 py-4">
                   <span className="text-xs font-medium text-slate-500">
                     <span className={`fi fi-${reservation.language?.toLowerCase()}`} />
                   </span>
@@ -1014,9 +1084,8 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
-        styles[status] ?? "bg-gray-100 text-gray-700"
-      }`}
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${styles[status] ?? "bg-gray-100 text-gray-700"
+        }`}
     >
       {status}
     </span>

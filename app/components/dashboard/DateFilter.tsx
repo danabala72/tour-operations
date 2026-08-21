@@ -1,18 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function isoDate(date: Date) {
-  const y = date.getFullYear();
-  const m = date.getMonth();
-  const d = date.getDate();
-
-  return `${y}-${pad(m + 1)}-${pad(d)}`;
-}
+import { formatDateOnly } from "@/lib/format";
 
 function startOfWeek(today: Date) {
   const d = new Date(today);
@@ -78,12 +67,12 @@ const DateFilter = ({
 
     switch (preset) {
       case "today":
-        return { from: isoDate(t), to: isoDate(t) };
+        return { from: formatDateOnly(t), to: formatDateOnly(t) };
 
       case "week":
         return {
-          from: isoDate(startOfWeek(t)),
-          to: isoDate(endOfWeek(t)),
+          from: formatDateOnly(startOfWeek(t)),
+          to: formatDateOnly(endOfWeek(t)),
         };
 
       case "month": {
@@ -100,21 +89,21 @@ const DateFilter = ({
         );
 
         return {
-          from: isoDate(first),
-          to: isoDate(last),
+          from: formatDateOnly(first),
+          to: formatDateOnly(last),
         };
       }
 
       case "7d":
         return {
-          from: isoDate(dayOffset(t, -6)),
-          to: isoDate(t),
+          from: formatDateOnly(dayOffset(t, -6)),
+          to: formatDateOnly(t),
         };
 
       case "30d":
         return {
-          from: isoDate(dayOffset(t, -29)),
-          to: isoDate(t),
+          from: formatDateOnly(dayOffset(t, -29)),
+          to: formatDateOnly(t),
         };
 
       case "custom":

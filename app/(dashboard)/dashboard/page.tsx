@@ -134,13 +134,6 @@ function StatGrid({
         icon={CheckCircle2}
         color="green"
       />
-
-      <StatCard
-        label="Cancelled"
-        value={formatCount(summary.cancelled)}
-        icon={XCircle}
-        color="red"
-      />
     </div>
   );
 }

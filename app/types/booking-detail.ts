@@ -22,6 +22,8 @@ export interface BookingDetail  {
   internalNote: string | null;
   status: string;
   bookingUrl: string | null;
+  rescheduleDate: string | null;
+  rescheduledFrom: string | null;
   createdAt: string;
   updatedAt: string;
   channel: {
