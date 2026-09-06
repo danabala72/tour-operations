@@ -2,13 +2,33 @@ import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "@/lib/generated/prisma/client";
 
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required.");
+}
+
+const connectionUrl = new URL(databaseUrl);
+
+if (connectionUrl.protocol !== "mysql:") {
+  throw new Error("DATABASE_URL must use the mysql:// protocol.");
+}
+
+const database = decodeURIComponent(
+  connectionUrl.pathname.replace(/^\//, "")
+);
+
+if (!database) {
+  throw new Error("DATABASE_URL must include a database name.");
+}
+
 const adapter = new PrismaMariaDb({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT ?? 3306),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  connectionLimit: 10,
+  host: connectionUrl.hostname,
+  port: Number(connectionUrl.port || 3306),
+  user: decodeURIComponent(connectionUrl.username),
+  password: decodeURIComponent(connectionUrl.password),
+  database,
+  connectionLimit: 3,
   ssl: true,
 });
 
