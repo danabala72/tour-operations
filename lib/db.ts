@@ -9,6 +9,7 @@ const adapter = new PrismaMariaDb({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   connectionLimit: 10,
+  ssl: true,
 });
 
 function convertPrismaValues(obj: unknown): unknown {
