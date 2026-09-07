@@ -15,7 +15,7 @@ const NotesCard = ({ booking }: { booking: BookingDetail }) => {
           </div>
 
           {booking.customerNote ? (
-            <div className="mt-1 rounded-lg bg-slate-50/80 px-3 py-2.5 text-sm text-slate-700">
+            <div className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-slate-50/80 px-3 py-2.5 text-sm text-slate-700">
               {booking.customerNote}
             </div>
           ) : (
