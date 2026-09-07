@@ -21,7 +21,14 @@ export async function proxy(request: Request) {
     pathname === "/login" ||
     pathname.startsWith("/api/auth/");
 
+  const isWebhookRoute =
+    pathname === "/api/webhooks/civitatis";
+
   const token = request.headers.get("cookie")?.split("; ").find((c) => c.startsWith(`${SESSION_COOKIE}=`))?.split("=")[1];
+
+  if (isWebhookRoute) {
+    return NextResponse.next();
+  }
 
   if (isAuthRoute) {
     if (token && pathname === "/login") {
