@@ -34,7 +34,7 @@ function nullable(value: unknown) {
 
 export async function POST(request: NextRequest) {
   const expectedSecret = process.env.WEBHOOK_SECRET;
-  const receivedSecret = request.headers.get("x-civitatis-webhook-secret");
+  const receivedSecret = request.headers.get("x-webhook-secret");
 
   if (!expectedSecret || receivedSecret !== expectedSecret) {
     return NextResponse.json(
