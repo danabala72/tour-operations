@@ -53,6 +53,7 @@ export async function getReservations(
           language: true,
           pickupTime: true,
           pickupAddress: true,
+          customerNote: true,
           salePrice: true,
           netPrice: true,
           currency: true,
