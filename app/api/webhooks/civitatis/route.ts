@@ -28,7 +28,7 @@ type BookingPayload = {
   status?: "NEW" | "ASSIGNED" | "ON_PROGRESS" | "DONE" | "CANCELLED";
 };
 
-function nullable(value: unknown) {
+function nullable<T>(value: T | undefined | null): T | null {
   return value === undefined || value === "" ? null : value;
 }
 
