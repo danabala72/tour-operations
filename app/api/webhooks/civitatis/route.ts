@@ -25,6 +25,7 @@ type BookingPayload = {
   currency?: string | null;
   customer_note?: string | null;
   internal_note?: string | null;
+  channel?: string | null;
   status?: "NEW" | "ASSIGNED" | "ON_PROGRESS" | "DONE" | "CANCELLED";
 };
 
@@ -70,15 +71,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const channelCode = String(body?.channel ?? request.headers.get("x-channel-code") ?? "CIVITATIS").toUpperCase();
+    const channelName = channelCode === "GYG" ? "GetYourGuide" : channelCode === "CIVITATIS" ? "Civitatis" : channelCode;
     const channel = await db.channel.upsert({
-      where: { code: "CIVITATIS" },
+      where: { code: channelCode },
       create: {
-        code: "CIVITATIS",
-        name: "Civitatis",
+        code: channelCode,
+        name: channelName,
         status: "ACTIVE",
       },
       update: {
-        name: "Civitatis",
+        name: channelName,
         status: "ACTIVE",
       },
       select: { id: true },
@@ -89,7 +92,7 @@ export async function POST(request: NextRequest) {
     const skipped: string[] = [];
 
     for (const booking of bookings) {
-      if (!booking.supplier_booking_id || !booking.tour_date || !booking.customer_name) {
+      if (!booking.supplier_booking_id || !booking.tour_date) {
         skipped.push(String(booking.supplier_booking_id ?? "unknown"));
         continue;
       }
@@ -107,7 +110,7 @@ export async function POST(request: NextRequest) {
             supplierBookingId,
           },
         },
-        select: { id: true },
+        select: { id: true, customerName: true, customerEmail: true, customerPhone: true },
       });
 
       const data = {
@@ -118,9 +121,9 @@ export async function POST(request: NextRequest) {
         tourOption: nullable(booking.tour_option),
         tourDate,
         tourTime: toTime(booking.tour_time),
-        customerName: booking.customer_name,
-        customerEmail: nullable(booking.customer_email),
-        customerPhone: nullable(booking.customer_phone),
+        customerName: booking.customer_name ?? existing?.customerName ?? "Unknown customer",
+        customerEmail: nullable(booking.customer_email) ?? existing?.customerEmail ?? null,
+        customerPhone: nullable(booking.customer_phone) ?? existing?.customerPhone ?? null,
         paxTotal: Number(booking.pax_total ?? 0),
         language: nullable(booking.language),
         pickupTime: toTime(booking.pickup_time),
