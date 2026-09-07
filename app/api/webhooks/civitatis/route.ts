@@ -33,7 +33,7 @@ function nullable(value: unknown) {
 }
 
 export async function POST(request: NextRequest) {
-  const expectedSecret = process.env.CIVITATIS_WEBHOOK_SECRET;
+  const expectedSecret = process.env.WEBHOOK_SECRET;
   const receivedSecret = request.headers.get("x-civitatis-webhook-secret");
 
   if (!expectedSecret || receivedSecret !== expectedSecret) {
