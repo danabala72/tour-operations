@@ -45,6 +45,13 @@ function toTime(value: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function normalizeLanguage(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const aliases: Record<string, string> = { ITALIA: "IT", ITALIAN: "IT", ITALIANO: "IT", IT: "IT", PRANCIS: "FR", FRENCH: "FR", FRANCAIS: "FR", FR: "FR", SPANYOL: "ES", SPANISH: "ES", ESPANOL: "ES", ES: "ES", INGGRIS: "EN", ENGLISH: "EN", EN: "EN" };
+  const language = value.trim().toUpperCase();
+  return aliases[language] ?? language;
+}
+
 export async function POST(request: NextRequest) {
   const expectedSecret = process.env.WEBHOOK_SECRET;
   const receivedSecret = request.headers.get("x-webhook-secret");
@@ -113,7 +120,7 @@ export async function POST(request: NextRequest) {
         select: { id: true, customerName: true, customerEmail: true, customerPhone: true },
       });
 
-      const data = {
+      const createData = {
         supplierBookingId,
         supplierReference: nullable(booking.supplier_reference),
         bookingUrl: nullable(booking.booking_url),
@@ -125,7 +132,7 @@ export async function POST(request: NextRequest) {
         customerEmail: nullable(booking.customer_email) ?? existing?.customerEmail ?? null,
         customerPhone: nullable(booking.customer_phone) ?? existing?.customerPhone ?? null,
         paxTotal: Number(booking.pax_total ?? 0),
-        language: nullable(booking.language),
+        language: normalizeLanguage(booking.language),
         pickupTime: toTime(booking.pickup_time),
         pickupAddress: nullable(booking.pickup_address),
         pickupLat: nullable(booking.pickup_lat),
@@ -137,6 +144,26 @@ export async function POST(request: NextRequest) {
         internalNote: nullable(booking.internal_note),
         status: booking.status ?? "NEW",
       };
+      const updateData = {
+        ...(booking.supplier_reference !== undefined ? { supplierReference: nullable(booking.supplier_reference) } : {}),
+        ...(booking.booking_url !== undefined ? { bookingUrl: nullable(booking.booking_url) } : {}),
+        ...(booking.tour_name ? { tourName: booking.tour_name } : {}),
+        ...(booking.tour_option !== undefined ? { tourOption: nullable(booking.tour_option) } : {}), tourDate,
+        ...(booking.tour_time !== undefined ? { tourTime: toTime(booking.tour_time) } : {}),
+        ...(booking.customer_name ? { customerName: booking.customer_name } : {}),
+        ...(booking.customer_email !== undefined ? { customerEmail: nullable(booking.customer_email) } : {}),
+        ...(booking.customer_phone !== undefined ? { customerPhone: nullable(booking.customer_phone) } : {}),
+        ...(booking.pax_total !== undefined ? { paxTotal: Number(booking.pax_total) } : {}),
+        ...(booking.language !== undefined ? { language: normalizeLanguage(booking.language) } : {}),
+        ...(booking.pickup_time !== undefined ? { pickupTime: toTime(booking.pickup_time) } : {}),
+        ...(booking.pickup_address !== undefined ? { pickupAddress: nullable(booking.pickup_address) } : {}),
+        ...(booking.sale_price !== undefined ? { salePrice: nullable(booking.sale_price) } : {}),
+        ...(booking.net_price !== undefined ? { netPrice: nullable(booking.net_price) } : {}),
+        ...(booking.currency !== undefined ? { currency: booking.currency ?? "IDR" } : {}),
+        ...(booking.customer_note !== undefined ? { customerNote: nullable(booking.customer_note) } : {}),
+        ...(booking.internal_note !== undefined ? { internalNote: nullable(booking.internal_note) } : {}),
+        ...(booking.status !== undefined ? { status: booking.status } : {}),
+      };
 
       await db.reservation.upsert({
         where: {
@@ -145,8 +172,8 @@ export async function POST(request: NextRequest) {
             supplierBookingId,
           },
         },
-        create: { channelId: channel.id, ...data },
-        update: data,
+        create: { channelId: channel.id, ...createData },
+        update: updateData,
       });
 
       if (existing) updated++;
