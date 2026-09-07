@@ -4,6 +4,7 @@ import { formatDate, formatTime } from "@/lib/format";
 import { useEffect, useRef, useState } from "react";
 import {
   ListFilter,
+  MessageSquareText,
   XIcon,
   Users,
   RefreshCcw,
@@ -28,6 +29,7 @@ type Reservation = {
   language: string | null;
   pickupTime: string | null;
   pickupAddress: string | null;
+  customerNote: string | null;
   salePrice: number | string | null;
   netPrice: number | string | null;
   currency: string | null;
@@ -839,6 +841,19 @@ function ReservationCard({
           </div>
         )}
 
+        {reservation.customerNote && (
+          <div className="mt-3 rounded-xl bg-blue-50/70 px-3 py-2.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-blue-500">
+              <MessageSquareText size={13} strokeWidth={1.9} />
+              Customer note
+            </div>
+
+            <div className="mt-1 line-clamp-2 whitespace-pre-line text-sm text-slate-700">
+              {reservation.customerNote}
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="mt-4 flex items-center justify-between border-t border-slate-100/80 pt-3">
           <span className="text-xs text-slate-400">
@@ -941,6 +956,8 @@ function ReservationTable({
 
               <th className="px-5 py-4">Tour</th>
 
+              <th className="px-5 py-4">Customer note</th>
+
               <th className="px-5 py-4">Pax</th>
 
               <th className="px-5 py-4">Channel</th>
@@ -1020,6 +1037,23 @@ function ReservationTable({
                       <RefreshCcw size={10} strokeWidth={2} />
                       From {formatDate(reservation.rescheduledFrom)}
                     </div>
+                  )}
+                </td>
+
+                <td className="max-w-xs px-5 py-4">
+                  {reservation.customerNote ? (
+                    <div className="flex items-start gap-2 text-sm text-slate-600">
+                      <MessageSquareText
+                        size={15}
+                        strokeWidth={1.9}
+                        className="mt-0.5 shrink-0 text-blue-500"
+                      />
+                      <span className="line-clamp-2 whitespace-pre-line">
+                        {reservation.customerNote}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-300">-</span>
                   )}
                 </td>
 
