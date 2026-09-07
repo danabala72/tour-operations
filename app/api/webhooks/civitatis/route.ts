@@ -32,6 +32,18 @@ function nullable<T>(value: T | undefined | null): T | null {
   return value === undefined || value === "" ? null : value;
 }
 
+function toDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date(value + "T00:00:00.000Z");
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toTime(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date("1970-01-01T" + value + "Z");
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export async function POST(request: NextRequest) {
   const expectedSecret = process.env.WEBHOOK_SECRET;
   const receivedSecret = request.headers.get("x-webhook-secret");
@@ -97,14 +109,14 @@ export async function POST(request: NextRequest) {
         bookingUrl: nullable(booking.booking_url),
         tourName: booking.tour_name ?? "Civitatis Tour",
         tourOption: nullable(booking.tour_option),
-        tourDate: booking.tour_date,
-        tourTime: nullable(booking.tour_time),
+        tourDate: toDate(booking.tour_date)!,
+        tourTime: toTime(booking.tour_time),
         customerName: booking.customer_name,
         customerEmail: nullable(booking.customer_email),
         customerPhone: nullable(booking.customer_phone),
         paxTotal: Number(booking.pax_total ?? 0),
         language: nullable(booking.language),
-        pickupTime: nullable(booking.pickup_time),
+        pickupTime: toTime(booking.pickup_time),
         pickupAddress: nullable(booking.pickup_address),
         pickupLat: nullable(booking.pickup_lat),
         pickupLng: nullable(booking.pickup_lng),
