@@ -70,17 +70,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const channel = await db.channel.findUnique({
+    const channel = await db.channel.upsert({
       where: { code: "CIVITATIS" },
+      create: {
+        code: "CIVITATIS",
+        name: "Civitatis",
+        status: "ACTIVE",
+      },
+      update: {
+        name: "Civitatis",
+        status: "ACTIVE",
+      },
       select: { id: true },
     });
-
-    if (!channel) {
-      return NextResponse.json(
-        { success: false, message: "CIVITATIS channel is not configured" },
-        { status: 500 },
-      );
-    }
 
     let created = 0;
     let updated = 0;
