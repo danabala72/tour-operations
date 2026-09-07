@@ -93,6 +93,11 @@ export async function POST(request: NextRequest) {
       }
 
       const supplierBookingId = String(booking.supplier_booking_id);
+      const tourDate = toDate(booking.tour_date);
+      if (!tourDate) {
+        skipped.push(supplierBookingId);
+        continue;
+      }
       const existing = await db.reservation.findUnique({
         where: {
           channelId_supplierBookingId: {
@@ -109,7 +114,7 @@ export async function POST(request: NextRequest) {
         bookingUrl: nullable(booking.booking_url),
         tourName: booking.tour_name ?? "Civitatis Tour",
         tourOption: nullable(booking.tour_option),
-        tourDate: toDate(booking.tour_date)!,
+        tourDate,
         tourTime: toTime(booking.tour_time),
         customerName: booking.customer_name,
         customerEmail: nullable(booking.customer_email),
