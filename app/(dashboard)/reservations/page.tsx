@@ -59,6 +59,19 @@ type ApiResponse = {
   message?: string;
 };
 
+type ReservationsCache = Pick<
+  ApiResponse,
+  "data" | "pagination" | "channelCounts" | "statusCounts" | "dateCounts"
+> & {
+  search: string;
+  status: string;
+  channel: string;
+  dateFilter: string;
+  scrollY: number;
+};
+
+let reservationsCache: ReservationsCache | null = null;
+
 
 
 const channelFilters = [
@@ -91,32 +104,50 @@ const channelLogoMap: Record<string, string> = {
 };
 
 export default function ReservationsPage() {
-  const [data, setData] = useState<Reservation[]>([]);
+  const [data, setData] = useState<Reservation[]>(
+    () => reservationsCache?.data ?? []
+  );
 
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0,
-  });
+  const [pagination, setPagination] = useState<Pagination>(
+    () => reservationsCache?.pagination ?? ({
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0,
+    })
+  );
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(
+    () => reservationsCache?.search ?? ""
+  );
 
   const searchInitialized = useRef(false);
 
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(
+    () => reservationsCache?.status ?? ""
+  );
 
-  const [channel, setChannel] = useState("");
+  const [channel, setChannel] = useState(
+    () => reservationsCache?.channel ?? ""
+  );
 
-  const [channelCounts, setChannelCounts] = useState<Record<string, number>>({});
+  const [channelCounts, setChannelCounts] = useState<Record<string, number>>(
+    () => reservationsCache?.channelCounts ?? {}
+  );
 
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>(
+    () => reservationsCache?.statusCounts ?? {}
+  );
 
-  const [dateFilter, setDateFilter] = useState("THIS_WEEK");
+  const [dateFilter, setDateFilter] = useState(
+    () => reservationsCache?.dateFilter ?? "THIS_WEEK"
+  );
 
-  const [dateCounts, setDateCounts] = useState<Record<string, number>>({});
+  const [dateCounts, setDateCounts] = useState<Record<string, number>>(
+    () => reservationsCache?.dateCounts ?? {}
+  );
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!reservationsCache);
 
   const [error, setError] = useState("");
 
@@ -129,8 +160,10 @@ export default function ReservationsPage() {
   const [applying, setApplying] =
     useState(false);
 
-  async function loadReservations(page = 1) {
-    setLoading(true);
+  async function loadReservations(page = 1, background = false) {
+    if (!background) {
+      setLoading(true);
+    }
     setError("");
     setSelectedIds(new Set());
     setBulkStatus("");
@@ -174,6 +207,19 @@ export default function ReservationsPage() {
       setChannelCounts(result.channelCounts);
       setStatusCounts(result.statusCounts);
       setDateCounts(result.dateCounts);
+
+      reservationsCache = {
+        data: result.data,
+        pagination: result.pagination,
+        channelCounts: result.channelCounts,
+        statusCounts: result.statusCounts,
+        dateCounts: result.dateCounts,
+        search,
+        status,
+        channel,
+        dateFilter,
+        scrollY: reservationsCache?.scrollY ?? 0,
+      };
     } catch (error) {
       console.error(error);
 
@@ -181,17 +227,41 @@ export default function ReservationsPage() {
         error instanceof Error ? error.message : "Failed to load reservations.",
       );
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   }
 
   useEffect(() => {
+    const canReuseCache = Boolean(
+      reservationsCache &&
+      reservationsCache.search === search &&
+      reservationsCache.status === status &&
+      reservationsCache.channel === channel &&
+      reservationsCache.dateFilter === dateFilter
+    );
+    const cachedScrollY = canReuseCache
+      ? reservationsCache?.scrollY ?? 0
+      : 0;
+
+    if (canReuseCache) {
+      requestAnimationFrame(() => window.scrollTo(0, cachedScrollY));
+    }
+
     const timer = window.setTimeout(() => {
-      loadReservations(1);
+      loadReservations(
+        canReuseCache ? reservationsCache?.pagination.page ?? 1 : 1,
+        canReuseCache
+      );
     }, 0);
 
     return () => {
       window.clearTimeout(timer);
+
+      if (reservationsCache) {
+        reservationsCache.scrollY = window.scrollY;
+      }
     };
   }, [status, channel, dateFilter]);
 
