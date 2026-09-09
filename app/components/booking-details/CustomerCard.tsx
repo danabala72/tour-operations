@@ -1,6 +1,7 @@
 import { CalendarDays, Mail, Phone, User } from "lucide-react";
 import { BookingDetail } from "../../types/booking-detail";
 import { whatsappLink } from "@/lib/templates";
+import { languageFlag, normalizeLanguage } from "@/lib/language";
 import SectionCard from "./SectionCard";
 import InfoRow from "./InfoRow";
 
@@ -55,16 +56,10 @@ const CustomerCard = ({ booking }: { booking: BookingDetail }) => {
         icon={CalendarDays}
         label="Language"
         value={
-          booking.language ? (
-            <span className="inline-flex items-center gap-1.5">
-              <span
-                className={`fi fi-${booking.language.toLowerCase()} text-xl`}
-              />
-              {booking.language}
-            </span>
-          ) : (
-            "-"
-          )
+          <span className="inline-flex items-center gap-1.5">
+            <span className={`fi fi-${languageFlag(booking.language)} text-xl`} />
+            {normalizeLanguage(booking.language)}
+          </span>
         }
       />
     </SectionCard>

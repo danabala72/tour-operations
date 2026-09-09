@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { normalizeLanguage } from "@/lib/language";
 
 export const runtime = "nodejs";
 
@@ -43,13 +44,6 @@ function toTime(value: string | null | undefined): Date | null {
   if (!value) return null;
   const date = new Date("1970-01-01T" + value + "Z");
   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function normalizeLanguage(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const aliases: Record<string, string> = { ITALIA: "IT", ITALIAN: "IT", ITALIANO: "IT", IT: "IT", PRANCIS: "FR", FRENCH: "FR", FRANCAIS: "FR", FR: "FR", SPANYOL: "ES", SPANISH: "ES", ESPANOL: "ES", ES: "ES", INGGRIS: "EN", ENGLISH: "EN", EN: "EN" };
-  const language = value.trim().toUpperCase();
-  return aliases[language] ?? language;
 }
 
 export async function POST(request: NextRequest) {

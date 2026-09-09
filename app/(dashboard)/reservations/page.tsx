@@ -15,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 import useSWR from "swr";
 import { statusFilters } from "@/app/types/style";
+import { languageFlag } from "@/lib/language";
 import BulkStatusActionBar from "@/app/components/booking-details/BulkStatusActionBar";
 
 type Reservation = {
@@ -926,7 +927,7 @@ function ReservationCard({
           )}
 
           <span className="text-xs font-medium text-slate-500">
-            <span className={`fi fi-${reservation.language?.toLowerCase()}`} />
+            <span className={`fi fi-${languageFlag(reservation.language)}`} />
           </span>
         </div>
 
@@ -1170,7 +1171,7 @@ function ReservationTable({
                 </td>
                 <td className="px-5 py-4">
                   <span className="text-xs font-medium text-slate-500">
-                    <span className={`fi fi-${reservation.language?.toLowerCase()}`} />
+                    <span className={`fi fi-${languageFlag(reservation.language)}`} />
                   </span>
                 </td>
 

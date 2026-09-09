@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import {
+import { 
   BookOpen,
   CheckCircle2,
   DollarSign,
@@ -16,6 +16,7 @@ import DateFilter from "@/app/components/dashboard/DateFilter";
 import StatCard from "@/app/components/dashboard/StatCard";
 import type { DashboardStats } from "@/app/types/dashboard";
 import { channelLogoMap } from "@/app/types/channel";
+import { normalizeLanguage } from "@/lib/language";
 
 type ApiResponse =
   | { success: true; data: DashboardStats }
@@ -181,9 +182,9 @@ function Charts({
   });
 
   const languageData = stats.byLanguage.map((l) => ({
-    label: l.language,
+    label: normalizeLanguage(l.language),
     value: l.count,
-    flag: l.language,
+    flag: normalizeLanguage(l.language),
   }));
 
   return (

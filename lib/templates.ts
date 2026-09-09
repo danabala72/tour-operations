@@ -52,7 +52,7 @@ info: balitravelawesome690@gmail.com | +6282146397875`,
 export function getTemplate(
   language: string | null | undefined
 ): string {
-  const code = (language ?? "").toLowerCase();
+  const code = (language ?? "EN").toLowerCase();
 
   return TEMPLATES[code] ?? TEMPLATES.fr;
 }

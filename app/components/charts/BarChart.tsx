@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { languageFlag } from "@/lib/language";
 
 function cn(
   ...classes: Array<string | false | undefined | null>
@@ -103,7 +104,7 @@ const BarChart = ({
                   height={14}
                 >
                   <span
-                    className={`fi fi-${String(d.flag).toLowerCase()}`}
+                    className={`fi fi-${languageFlag(String(d.flag))}`}
                     style={{
                       display: "block",
                       width: "16px",
