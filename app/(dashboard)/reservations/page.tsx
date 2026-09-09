@@ -276,7 +276,7 @@ export default function ReservationsPage() {
     [reservations, search, channel, dateFilter]
   );
 
-  const dateCounts = useMemo(() => ({
+  const dateCounts = useMemo<Record<string, number>>(() => ({
     TODAY: filterReservations(reservations, { search, status, channel, dateFilter: "TODAY" }).length,
     TOMORROW: filterReservations(reservations, { search, status, channel, dateFilter: "TOMORROW" }).length,
     THIS_WEEK: filterReservations(reservations, { search, status, channel, dateFilter: "THIS_WEEK" }).length,
