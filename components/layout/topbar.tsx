@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { IconBell, IconChevronDown, IconLogout, IconMenu2, IconSettings } from "@tabler/icons-react";
 
 function getTitle(pathname: string) {
   if (pathname === "/reservations" || pathname === "/reservations/") {
@@ -23,7 +24,7 @@ function getTitle(pathname: string) {
   return "Dashboard";
 }
 
-export function Topbar() {
+export function Topbar({ onMenuOpen }: { onMenuOpen: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -77,10 +78,11 @@ export function Topbar() {
       <div className="flex items-center gap-3">
         <button
           type="button"
+          onClick={onMenuOpen}
           className="flex size-9 items-center justify-center rounded-lg border lg:hidden"
           aria-label="Open menu"
         >
-          ☰
+          <IconMenu2 size={21} />
         </button>
 
         <h1 className="text-base font-semibold">
@@ -96,7 +98,7 @@ export function Topbar() {
           className="flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
           aria-label="Notifications"
         >
-          🔔
+          <IconBell size={20} />
         </button>
 
         {/* Account */}
@@ -130,14 +132,12 @@ export function Topbar() {
             </div>
 
             {/* Arrow */}
-            <span
+            <IconChevronDown
               className={[
-                "hidden text-xs text-slate-400 transition-transform sm:block",
+                "hidden size-4 text-slate-400 transition-transform sm:block",
                 open ? "rotate-180" : "",
               ].join(" ")}
-            >
-              ▼
-            </span>
+            />
           </button>
 
           {/* Dropdown */}
@@ -169,7 +169,7 @@ export function Topbar() {
                   }}
                   className="flex cursor-pointer w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  <span>⚙</span>
+                  <IconSettings size={18} />
                   <span>Settings</span>
                 </button>
 
@@ -178,7 +178,7 @@ export function Topbar() {
                   onClick={handleLogout}
                   className="flex cursor-pointer w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
                 >
-                  <span>↪</span>
+                  <IconLogout size={18} />
                   <span>Sign out</span>
                 </button>
               </div>
