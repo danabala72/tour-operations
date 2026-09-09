@@ -26,7 +26,7 @@ export async function getReservations(
   );
 
   const limit = Math.min(
-    100,
+    500,
     Math.max(
       1,
       Number(filters.limit ?? 20)
@@ -139,6 +139,9 @@ function buildReservationWhere(
         lte: new Date(filters.to),
       };
     }
+  } else if (filters.dateFilter === "ALL") {
+    // No date constraint. The client keeps this result in memory and applies
+    // interactive filters without another network request.
   } else if (filters.dateFilter === "TODAY") {
     where.tourDate = {
       equals: today,

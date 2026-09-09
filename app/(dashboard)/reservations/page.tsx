@@ -1,16 +1,19 @@
 "use client";
 
-import { formatDate, formatTime } from "@/lib/format";
-import { useEffect, useRef, useState } from "react";
+import { formatDate, formatDateOnly, formatTime } from "@/lib/format";
+import { getBusinessDate } from "@/lib/business-time";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ListFilter,
   MessageSquareText,
   XIcon,
   Users,
   RefreshCcw,
+  LoaderCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import useSWR from "swr";
 import { statusFilters } from "@/app/types/style";
 import BulkStatusActionBar from "@/app/components/booking-details/BulkStatusActionBar";
 
@@ -59,18 +62,29 @@ type ApiResponse = {
   message?: string;
 };
 
-type ReservationsCache = Pick<
-  ApiResponse,
-  "data" | "pagination" | "channelCounts" | "statusCounts" | "dateCounts"
-> & {
+type ReservationsCache = {
   search: string;
   status: string;
   channel: string;
   dateFilter: string;
+  page: number;
   scrollY: number;
 };
 
 let reservationsCache: ReservationsCache | null = null;
+
+const RESERVATIONS_KEY = "/api/reservations?dateFilter=ALL&page=1&limit=500";
+
+async function fetchReservations(url: string): Promise<ApiResponse> {
+  const response = await fetch(url, { cache: "no-store" });
+  const result = (await response.json()) as ApiResponse;
+
+  if (!response.ok) {
+    throw new Error(result.message ?? "Failed to load reservations.");
+  }
+
+  return result;
+}
 
 
 
@@ -103,25 +117,93 @@ const channelLogoMap: Record<string, string> = {
   VIATOR: "/channels/viator.png",
 };
 
-export default function ReservationsPage() {
-  const [data, setData] = useState<Reservation[]>(
-    () => reservationsCache?.data ?? []
-  );
+type ClientFilters = {
+  search?: string;
+  status?: string;
+  channel?: string;
+  dateFilter?: string;
+};
 
-  const [pagination, setPagination] = useState<Pagination>(
-    () => reservationsCache?.pagination ?? ({
-      page: 1,
-      limit: 20,
-      total: 0,
-      totalPages: 0,
-    })
-  );
+function filterReservations(
+  reservations: Reservation[],
+  filters: ClientFilters
+) {
+  const today = formatDateOnly(getBusinessDate());
+  const tomorrow = formatDateOnly(getBusinessDate(1));
+  const weekEnd = formatDateOnly(getBusinessDate(6));
+  const search = filters.search?.trim().toLowerCase() ?? "";
+
+  return reservations.filter((reservation) => {
+    const tourDate = reservation.tourDate.slice(0, 10);
+
+    if (filters.channel && reservation.channel.code !== filters.channel) {
+      return false;
+    }
+
+    if (filters.status && reservation.status !== filters.status) {
+      return false;
+    }
+
+    if (filters.dateFilter === "TODAY" && tourDate !== today) {
+      return false;
+    }
+
+    if (filters.dateFilter === "TOMORROW" && tourDate !== tomorrow) {
+      return false;
+    }
+
+    if (filters.dateFilter === "THIS_WEEK" && (tourDate < today || tourDate > weekEnd)) {
+      return false;
+    }
+
+    if (filters.dateFilter === "PREVIOUS" && tourDate >= today) {
+      return false;
+    }
+
+    if (search) {
+      const searchable = [
+        reservation.supplierBookingId,
+        reservation.supplierReference,
+        reservation.customerName,
+        reservation.customerEmail,
+        reservation.customerPhone,
+        reservation.tourName,
+        reservation.tourOption,
+        reservation.pickupAddress,
+        reservation.customerNote,
+        reservation.channel.code,
+        reservation.channel.name,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (!searchable.includes(search)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+function countBy(
+  reservations: Reservation[],
+  keyFor: (reservation: Reservation) => string
+) {
+  return reservations.reduce<Record<string, number>>((counts, reservation) => {
+    const key = keyFor(reservation);
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+export default function ReservationsPage() {
+  const [page, setPage] = useState(() => reservationsCache?.page ?? 1);
 
   const [search, setSearch] = useState(
     () => reservationsCache?.search ?? ""
   );
-
-  const searchInitialized = useRef(false);
 
   const [status, setStatus] = useState(
     () => reservationsCache?.status ?? ""
@@ -131,25 +213,9 @@ export default function ReservationsPage() {
     () => reservationsCache?.channel ?? ""
   );
 
-  const [channelCounts, setChannelCounts] = useState<Record<string, number>>(
-    () => reservationsCache?.channelCounts ?? {}
-  );
-
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>(
-    () => reservationsCache?.statusCounts ?? {}
-  );
-
   const [dateFilter, setDateFilter] = useState(
     () => reservationsCache?.dateFilter ?? "THIS_WEEK"
   );
-
-  const [dateCounts, setDateCounts] = useState<Record<string, number>>(
-    () => reservationsCache?.dateCounts ?? {}
-  );
-
-  const [loading, setLoading] = useState(!reservationsCache);
-
-  const [error, setError] = useState("");
 
   const [selectedIds, setSelectedIds] =
     useState<Set<number>>(new Set());
@@ -160,135 +226,88 @@ export default function ReservationsPage() {
   const [applying, setApplying] =
     useState(false);
 
-  async function loadReservations(page = 1, background = false) {
-    if (!background) {
-      setLoading(true);
-    }
-    setError("");
-    setSelectedIds(new Set());
-    setBulkStatus("");
-    setApplying(false);
+  const {
+    data: response,
+    error: swrError,
+    isLoading: loading,
+    mutate,
+  } = useSWR<ApiResponse>(RESERVATIONS_KEY, fetchReservations, {
+    dedupingInterval: 30_000,
+    keepPreviousData: true,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
 
-    try {
-      const params = new URLSearchParams();
-
-      params.set("page", String(page));
-
-      params.set("limit", "20");
-
-      if (search.trim()) {
-        params.set("search", search.trim());
-      }
-
-      if (status) {
-        params.set("status", status);
-      }
-
-      if (channel) {
-        params.set("channel", channel);
-      }
-
-      if (dateFilter) {
-        params.set("dateFilter", dateFilter);
-      }
-
-      const response = await fetch(`/api/reservations?${params.toString()}`, {
-        cache: "no-store",
-      });
-
-      const result = (await response.json()) as ApiResponse;
-
-      if (!response.ok) {
-        throw new Error(result.message ?? "Failed to load reservations.");
-      }
-
-      setData(result.data);
-      setPagination(result.pagination);
-      setChannelCounts(result.channelCounts);
-      setStatusCounts(result.statusCounts);
-      setDateCounts(result.dateCounts);
-
-      reservationsCache = {
-        data: result.data,
-        pagination: result.pagination,
-        channelCounts: result.channelCounts,
-        statusCounts: result.statusCounts,
-        dateCounts: result.dateCounts,
-        search,
-        status,
-        channel,
-        dateFilter,
-        scrollY: reservationsCache?.scrollY ?? 0,
-      };
-    } catch (error) {
-      console.error(error);
-
-      setError(
-        error instanceof Error ? error.message : "Failed to load reservations.",
-      );
-    } finally {
-      if (!background) {
-        setLoading(false);
-      }
-    }
-  }
+  const reservations = useMemo(() => response?.data ?? [], [response?.data]);
+  const error = swrError instanceof Error ? swrError.message : "";
 
   useEffect(() => {
-    const canReuseCache = Boolean(
-      reservationsCache &&
-      reservationsCache.search === search &&
-      reservationsCache.status === status &&
-      reservationsCache.channel === channel &&
-      reservationsCache.dateFilter === dateFilter
-    );
-    const cachedScrollY = canReuseCache
-      ? reservationsCache?.scrollY ?? 0
-      : 0;
+    const cachedScrollY = reservationsCache?.scrollY ?? 0;
 
-    if (canReuseCache) {
+    if (cachedScrollY) {
       requestAnimationFrame(() => window.scrollTo(0, cachedScrollY));
     }
 
-    const timer = window.setTimeout(() => {
-      loadReservations(
-        canReuseCache ? reservationsCache?.pagination.page ?? 1 : 1,
-        canReuseCache
-      );
-    }, 0);
-
     return () => {
-      window.clearTimeout(timer);
-
       if (reservationsCache) {
         reservationsCache.scrollY = window.scrollY;
       }
     };
-  }, [status, channel, dateFilter]);
+  }, []);
+
+  const filteredReservations = useMemo(
+    () => filterReservations(reservations, { search, status, channel, dateFilter }),
+    [reservations, search, status, channel, dateFilter]
+  );
+
+  const channelCounts = useMemo(
+    () => countBy(
+      filterReservations(reservations, { search, status, dateFilter }),
+      (reservation) => reservation.channel.code ?? "UNKNOWN"
+    ),
+    [reservations, search, status, dateFilter]
+  );
+
+  const statusCounts = useMemo(
+    () => countBy(
+      filterReservations(reservations, { search, channel, dateFilter }),
+      (reservation) => reservation.status
+    ),
+    [reservations, search, channel, dateFilter]
+  );
+
+  const dateCounts = useMemo(() => ({
+    TODAY: filterReservations(reservations, { search, status, channel, dateFilter: "TODAY" }).length,
+    TOMORROW: filterReservations(reservations, { search, status, channel, dateFilter: "TOMORROW" }).length,
+    THIS_WEEK: filterReservations(reservations, { search, status, channel, dateFilter: "THIS_WEEK" }).length,
+    PREVIOUS: filterReservations(reservations, { search, status, channel, dateFilter: "PREVIOUS" }).length,
+  }), [reservations, search, status, channel]);
+
+  const pagination: Pagination = {
+    page,
+    limit: 20,
+    total: filteredReservations.length,
+    totalPages: Math.ceil(filteredReservations.length / 20),
+  };
+
+  const data = filteredReservations.slice((page - 1) * 20, page * 20);
 
   useEffect(() => {
-    if (!searchInitialized.current) {
-      searchInitialized.current = true;
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      loadReservations(1);
-    }, 400);
-
-    return () => {
-      window.clearTimeout(timer);
+    reservationsCache = {
+      search,
+      status,
+      channel,
+      dateFilter,
+      page,
+      scrollY: reservationsCache?.scrollY ?? 0,
     };
-  }, [search]);
+  }, [search, status, channel, dateFilter, page]);
 
   const idsOnPage = data.map((r) => r.id);
 
   const allSelected =
     idsOnPage.length > 0 &&
     idsOnPage.every((id) => selectedIds.has(id));
-
-  const someSelected =
-    idsOnPage.some((id) => selectedIds.has(id)) &&
-    !allSelected;
 
   function toggleSelect(
     id: number,
@@ -308,9 +327,14 @@ export default function ReservationsPage() {
   }
 
   function toggleSelectAll() {
-    setSelectedIds((prev) =>
+    setSelectedIds(() =>
       allSelected ? new Set() : new Set(idsOnPage)
     );
+  }
+
+  function resetFilteredView() {
+    setPage(1);
+    setSelectedIds(new Set());
   }
 
   function clearSelection() {
@@ -325,17 +349,18 @@ export default function ReservationsPage() {
 
     const ids = Array.from(selectedIds);
 
-    const before = new Map(
-      data.map((r) => [r.id, r.status])
-    );
+    const optimisticResponse = response
+      ? {
+          ...response,
+          data: response.data.map((r) =>
+            selectedIds.has(r.id) ? { ...r, status: bulkStatus } : r
+          ),
+        }
+      : undefined;
 
-    setData((prev) =>
-      prev.map((r) =>
-        selectedIds.has(r.id)
-          ? { ...r, status: bulkStatus }
-          : r
-      )
-    );
+    if (optimisticResponse) {
+      await mutate(optimisticResponse, { revalidate: false });
+    }
 
     setApplying(true);
 
@@ -366,16 +391,10 @@ export default function ReservationsPage() {
       }
 
       clearSelection();
-    } catch (err) {
-      setData((prev) =>
-        prev.map((r) => {
-          const s = before.get(r.id);
-
-          return s !== undefined
-            ? { ...r, status: s }
-            : r;
-        })
-      );
+    } catch {
+      if (response) {
+        await mutate(response, { revalidate: false });
+      }
     } finally {
       setApplying(false);
     }
@@ -397,7 +416,10 @@ export default function ReservationsPage() {
         <div className="relative">
           <input
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              resetFilteredView();
+            }}
             placeholder="Search reservation, customer, tour..."
             className="
               w-full
@@ -419,7 +441,10 @@ export default function ReservationsPage() {
           {search && (
             <button
               type="button"
-              onClick={() => setSearch("")}
+              onClick={() => {
+                setSearch("");
+                resetFilteredView();
+              }}
               aria-label="Clear search"
               className="
                 absolute
@@ -464,7 +489,10 @@ export default function ReservationsPage() {
             <button
               key={item.value}
               type="button"
-              onClick={() => setChannel(item.value)}
+              onClick={() => {
+                setChannel(item.value);
+                resetFilteredView();
+              }}
               title={item.label}
               aria-label={item.label}
               className={`flex
@@ -547,7 +575,10 @@ export default function ReservationsPage() {
             <button
               key={item.value}
               type="button"
-              onClick={() => setStatus(item.value)}
+              onClick={() => {
+                setStatus(item.value);
+                resetFilteredView();
+              }}
               title={item.label}
               aria-label={item.label}
               className={`flex
@@ -630,7 +661,10 @@ export default function ReservationsPage() {
             <button
               key={item.value}
               type="button"
-              onClick={() => setDateFilter(item.value)}
+              onClick={() => {
+                setDateFilter(item.value);
+                resetFilteredView();
+              }}
               title={item.label}
               aria-label={item.label}
               className={`flex
@@ -677,13 +711,13 @@ export default function ReservationsPage() {
 
       {/* Result count */}
       <div className="text-sm text-[var(--muted)]">
-        {loading ? "Loading..." : ``}
+        {!loading && `${pagination.total} reservation${pagination.total === 1 ? "" : "s"}`}
       </div>
 
       {/* Mobile list */}
       <div className="space-y-3 lg:hidden">
         {loading ? (
-          <LoadingCards />
+          <LoadingIndicator />
         ) : data.length === 0 ? (
           <EmptyState />
         ) : (
@@ -736,9 +770,7 @@ export default function ReservationsPage() {
       {/* Desktop table */}
       <div className="hidden overflow-hidden rounded-xl bg-white lg:block">
         {loading ? (
-          <div className="p-8 text-center text-sm text-[var(--muted)]">
-            Loading reservations...
-          </div>
+          <LoadingIndicator />
         ) : data.length === 0 ? (
           <EmptyState />
         ) : (
@@ -754,7 +786,7 @@ export default function ReservationsPage() {
 
       {/* Pagination */}
       {!loading && pagination.totalPages > 1 && (
-        <Pagination pagination={pagination} onPageChange={loadReservations} />
+        <Pagination pagination={pagination} onPageChange={setPage} />
       )}
     </div>
   );
@@ -1218,16 +1250,12 @@ function EmptyState() {
   );
 }
 
-function LoadingCards() {
+function LoadingIndicator() {
   return (
-    <>
-      {[1, 2, 3].map((item) => (
-        <div
-          key={item}
-          className="h-48 animate-pulse rounded-xl border bg-white"
-        />
-      ))}
-    </>
+    <div className="flex items-center justify-center gap-2 rounded-xl border bg-white px-4 py-12 text-sm text-[var(--muted)]">
+      <LoaderCircle className="size-5 animate-spin text-blue-600" />
+      <span>Loading reservations...</span>
+    </div>
   );
 }
 
