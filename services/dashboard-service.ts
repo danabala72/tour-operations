@@ -6,6 +6,7 @@ import type {
   Series,
 } from "@/app/types/dashboard";
 import { formatDateOnly, parseDateOnly } from "@/lib/format";
+import { getBusinessDate } from "@/lib/business-time";
 
 const CHANNEL_COLORS: Record<string, string> = {
   CIVITATIS: "text-blue-500",
@@ -21,11 +22,11 @@ export async function getStats(filters: {
   from?: string;
   to?: string;
 } = {}): Promise<DashboardStats> {
-  const today = new Date();
+  const today = getBusinessDate();
 
   const fromDate = filters.from
     ? parseDateOnly(filters.from)
-    : new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    : getBusinessDate(-30);
 
   const toDate = filters.to
     ? (() => {

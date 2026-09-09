@@ -2,28 +2,27 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatDateOnly } from "@/lib/format";
+import { getBusinessDate } from "@/lib/business-time";
 
 function startOfWeek(today: Date) {
   const d = new Date(today);
-  const day = (d.getDay() + 6) % 7;
+  const day = (d.getUTCDay() + 6) % 7;
 
-  d.setDate(d.getDate() - day);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - day);
 
   return d;
 }
 
 function endOfWeek(today: Date) {
   const d = startOfWeek(today);
-  d.setDate(d.getDate() + 6);
+  d.setUTCDate(d.getUTCDate() + 6);
 
   return d;
 }
 
 function dayOffset(today: Date, offset: number) {
   const d = new Date(today);
-  d.setDate(d.getDate() + offset);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + offset);
 
   return d;
 }
@@ -60,7 +59,7 @@ const DateFilter = ({
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const today = useMemo(() => new Date(), []);
+  const today = useMemo(() => getBusinessDate(), []);
 
   const range = useMemo(() => {
     const t = today;
@@ -76,17 +75,9 @@ const DateFilter = ({
         };
 
       case "month": {
-        const first = new Date(
-          t.getFullYear(),
-          t.getMonth(),
-          1
-        );
+        const first = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 1));
 
-        const last = new Date(
-          t.getFullYear(),
-          t.getMonth() + 1,
-          0
-        );
+        const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0));
 
         return {
           from: formatDateOnly(first),

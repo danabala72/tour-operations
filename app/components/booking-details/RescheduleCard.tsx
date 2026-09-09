@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarIcon, LoaderCircle, RefreshCcw } from "lucide-react";
 import SectionCard from "./SectionCard";
 import { formatDateOnly } from "@/lib/format";
+import { getBusinessDate } from "@/lib/business-time";
 
 type UpdateResult = {
   ok: boolean;
@@ -64,10 +65,7 @@ const RescheduleCard = ({
     setLoading(false);
   }
 
-  const today = new Date();
-  const minDate = formatDateOnly(
-    new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
-  );
+  const minDate = formatDateOnly(getBusinessDate());
 
   if (status === "DONE" || status === "CANCELLED") {
     return null;

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import type { ReservationWhereInput } from "@/lib/generated/prisma/models/Reservation";
 import type { ReservationStatus } from "@/lib/generated/prisma/enums";
 import { formatDateOnly } from "@/lib/format";
+import { getBusinessDate } from "@/lib/business-time";
 
 export type ReservationFilters = {
   date?: string;
@@ -113,6 +114,7 @@ function buildReservationWhere(
   filters: ReservationFilters
 ): ReservationWhereInput {
   const where: ReservationWhereInput = {};
+  const today = getBusinessDate();
 
   if (filters.date) {
     where.tourDate = new Date(
@@ -138,102 +140,34 @@ function buildReservationWhere(
       };
     }
   } else if (filters.dateFilter === "TODAY") {
-    const now = new Date();
-
     where.tourDate = {
-      equals: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate()
-        )
-      ),
+      equals: today,
     };
   } else if (filters.dateFilter === "TOMORROW") {
-    const now = new Date();
-
     where.tourDate = {
-      equals: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate() + 1
-        )
-      ),
+      equals: getBusinessDate(1),
     };
   } else if (filters.dateFilter === "PREVIOUS") {
-    const now = new Date();
-
     where.tourDate = {
-      lt: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate()
-        )
-      ),
+      lt: today,
     };
   } else if (filters.dateFilter === "THIS_WEEK") {
-    const now = new Date();
-
     where.tourDate = {
-      gte: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate()
-        )
-      ),
-      lte: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate() + 6
-        )
-      ),
+      gte: today,
+      lte: getBusinessDate(6),
     };
   } else if (filters.jobFilter === "TODAY") {
-    const now = new Date();
-
     where.tourDate = {
-      equals: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate()
-        )
-      ),
+      equals: today,
     };
   } else if (filters.jobFilter === "UPCOMING") {
-    const now = new Date();
-
     where.tourDate = {
-      gte: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate() + 1
-        )
-      ),
+      gte: getBusinessDate(1),
     };
   } else {
-    const now = new Date();
-
     where.tourDate = {
-      gte: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate()
-        )
-      ),
-      lte: new Date(
-        Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate() + 7
-        )
-      ),
+      gte: today,
+      lte: getBusinessDate(7),
     };
   }
 
@@ -378,10 +312,9 @@ export async function getDateCounts(
     to: undefined,
   });
 
-  const now = new Date();
-  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-  const weekEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 6));
+  const today = getBusinessDate();
+  const tomorrow = getBusinessDate(1);
+  const weekEnd = getBusinessDate(6);
 
   const result: Record<string, number> = {};
 
